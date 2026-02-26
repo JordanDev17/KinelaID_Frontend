@@ -1,0 +1,71 @@
+<div class="page-container relative w-full bg-transparent">
+  
+  <div class="hero-black-bg fixed inset-0 bg-[#020202] z-0 pointer-events-none"></div>
+
+  <div #canvasContainer class="fixed inset-0 z-10 pointer-events-none"></div>
+
+  <nav class="fixed top-0 w-full p-8 flex justify-between items-center z-50">
+    <div class="text-white font-black tracking-tighter text-2xl">
+      KINELA<span class="text-cyan-400">ID</span>
+    </div>
+    <div class="group relative">
+<button
+  (click)="goToLogin()"
+  class="cyber-btn px-6 py-2 text-xs tracking-[0.3em] relative overflow-hidden"
+>
+  SECURE_LOGIN
+</button>
+    </div>
+  </nav>
+
+  <section class="relative h-screen flex flex-col items-center justify-center z-20">
+    <div class="text-center">
+      <h1 class="cyber-title text-[12vw] font-black leading-none tracking-tighter">
+        @for (char of titleChars; track $index) {
+          <span class="char cyber-char">{{ char }}</span>
+        }
+      </h1>
+      <div class="h-px w-32 bg-cyan-500 mx-auto my-8 shadow-[0_0_15px_#00f0ff]"></div>
+      <p class="text-cyan-400/60 text-xs tracking-[1em] uppercase">Biometric Protection System</p>
+    </div>
+  </section>
+
+  <div class="h-[50vh] flex items-center justify-center">
+    <span class="text-[10px] text-cyan-500/20 tracking-[2em] animate-pulse">DECRYPTING_INFRASTRUCTURE...</span>
+  </div>
+
+<section class="carousel-section relative min-h-screen opacity-0 translate-y-20 z-20 px-10 md:px-20">
+  <div class="mb-20">
+    <span class="text-cyan-400 text-xs tracking-widest">01 // CRYPTO_SOLUTIONS</span>
+    <h2 class="text-white text-5xl md:text-6xl font-black mt-4">
+      Nuestros Servicios
+    </h2>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+
+    <div class="service-card p-8 group">
+      <h3 class="text-white text-xl font-bold">Gestión Biométrica</h3>
+      <p class="text-gray-500 text-sm mt-4">
+        Registro y autenticación facial avanzada con control por zonas.
+      </p>
+    </div>
+
+    <div class="service-card p-8 group">
+      <h3 class="text-white text-xl font-bold">Auditoría en Tiempo Real</h3>
+      <p class="text-gray-500 text-sm mt-4">
+        Monitoreo de accesos y detección de intentos no autorizados.
+      </p>
+    </div>
+
+    <div class="service-card p-8 group">
+      <h3 class="text-white text-xl font-bold">Reportes Inteligentes</h3>
+      <p class="text-gray-500 text-sm mt-4">
+        Generación de reportes exportables en PDF por fecha, zona y empleado.
+      </p>
+    </div>
+
+  </div>
+</section>
+
+</div>

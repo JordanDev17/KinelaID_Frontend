@@ -1,0 +1,97 @@
+/* ---------- SERVICIOS ---------- */
+
+.service-card {
+  @apply bg-white/[0.02] backdrop-blur-md border border-white/5 transition-all duration-700;
+  height: 420px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.service-card h3 {
+  @apply text-white text-xl font-bold;
+}
+
+.service-card p {
+  @apply text-gray-400 text-sm mt-4;
+}
+
+.service-card:hover {
+  @apply border-cyan-500/40 bg-cyan-500/[0.04];
+  transform: translateY(-10px);
+}
+
+/* ---------- HERO ---------- */
+
+.cyber-title {
+  color: white;
+  text-shadow:
+    0 0 10px #00f0ff,
+    0 0 20px #00f0ff,
+    0 0 40px #00f0ff;
+}
+
+/* ELIMINAMOS EL PATCH AZUL */
+.cyber-title::after {
+  display: none;
+}
+
+.separator-line {
+  width: 120px;
+  height: 1px;
+  background: #00f0ff;
+  margin: 2rem auto;
+  box-shadow: 0 0 20px #00f0ff;
+}
+
+.subtitle {
+  color: rgba(0,255,255,0.6);
+  letter-spacing: 0.6em;
+  text-transform: uppercase;
+  font-size: clamp(10px, 2vw, 14px);
+}
+
+/* ---------- DECRYPT ---------- */
+
+.decrypting {
+  font-size: 10px;
+  letter-spacing: 0.5em;
+  color: rgba(0,255,255,0.2);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%,100% { opacity: 0.2; }
+  50% { opacity: 0.6; }
+}
+
+/* ---------- SECCIONES ---------- */
+
+.section-index {
+  @apply text-cyan-400 text-xs tracking-widest;
+}
+
+.section-title {
+  @apply text-white text-4xl md:text-6xl font-black mt-4;
+}
+
+.architecture-text {
+  @apply text-gray-400 text-lg max-w-2xl;
+}
+
+/* ---------- GLOBAL SCAN ---------- */
+
+.page-container::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0,255,255,0.03) 0px,
+    rgba(0,255,255,0.03) 1px,
+    transparent 2px,
+    transparent 4px
+  );
+  z-index: 5;
+}

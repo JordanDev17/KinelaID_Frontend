@@ -1,1 +1,397 @@
-/* You can add global styles to this file, and also import other style files */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Reset global */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background: #0a0e27;
+  color: white;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  overflow-x: hidden;
+}
+
+/* ============================================
+   BACKGROUND SYSTEM - Autónomo y CSS Puro
+   ============================================ */
+
+#animated-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: #0a0e27;
+}
+
+
+/* CAPA 1: Gradiente Animado */
+.bg-gradient-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    135deg,
+    #050812 0%,
+    #0d1528 15%,
+    #1a1f3a 30%,
+    #0f1629 50%,
+    #1e2a4a 70%,
+    #0a0e27 100%
+  );
+  background-size: 400% 400%;
+  animation: gradientShift 25s ease infinite;
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* CAPA 2: Grid Pattern Animado */
+.bg-grid-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    linear-gradient(rgba(59, 130, 246, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59, 130, 246, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(0, 255, 136, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 136, 0.04) 1px, transparent 1px);
+  background-size: 60px 60px, 60px 60px, 120px 120px, 120px 120px;
+  animation: gridMove 30s linear infinite;
+  opacity: 0.6;
+}
+
+@keyframes gridMove {
+  0% { background-position: 0 0, 0 0, 0 0, 0 0; }
+  100% { background-position: 60px 60px, 60px 60px, 120px 120px, 120px 120px; }
+}
+
+/* CAPA 3: Círculos Blur */
+.bg-circles-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.blur-circle {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.25;
+  animation: pulseCircle 12s ease-in-out infinite;
+}
+
+.blur-circle-1 {
+  width: 700px;
+  height: 700px;
+  top: -15%;
+  right: -10%;
+  animation-delay: 0s;
+}
+
+.blur-circle-2 {
+  width: 650px;
+  height: 650px;
+  bottom: -20%;
+  left: -10%;
+  animation-delay: 2.5s;
+}
+
+.blur-circle-3 {
+  width: 600px;
+  height: 600px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation-delay: 5s;
+}
+
+.blur-circle-4 {
+  width: 680px;
+  height: 680px;
+  top: 15%;
+  right: 35%;
+  animation-delay: 7.5s;
+}
+
+.blur-circle-5 {
+  width: 620px;
+  height: 620px;
+  bottom: 25%;
+  left: 45%;
+  animation-delay: 10s;
+}
+
+@keyframes pulseCircle {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.2;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.4;
+  }
+}
+
+/* CAPA 4: Figuras Flotantes */
+.floating-shapes-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.floating-shape {
+  position: absolute;
+  animation: floatShape ease-in-out infinite;
+}
+
+/* Círculos */
+.shape-circle {
+  width: 12px;
+  height: 12px;
+  background: rgba(59, 130, 246, 0.6);
+  border-radius: 50%;
+  box-shadow: 
+    0 0 20px rgba(59, 130, 246, 0.8),
+    0 0 40px rgba(59, 130, 246, 0.4);
+}
+
+/* Rombos */
+.shape-diamond {
+  width: 16px;
+  height: 16px;
+  background: rgba(0, 255, 136, 0.5);
+  transform: rotate(45deg);
+  box-shadow: 
+    0 0 15px rgba(0, 255, 136, 0.7),
+    0 0 30px rgba(0, 255, 136, 0.3);
+}
+
+/* Estrellas (4 puntas) */
+.shape-star {
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 14px solid rgba(139, 92, 246, 0.6);
+  position: relative;
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.8);
+}
+
+.shape-star::after {
+  content: '';
+  position: absolute;
+  top: 5px;
+  left: -8px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 14px solid rgba(139, 92, 246, 0.6);
+}
+
+/* Hexágonos */
+.shape-hexagon {
+  width: 20px;
+  height: 23px;
+  background: rgba(6, 182, 212, 0.4);
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.6);
+}
+
+@keyframes floatShape {
+  0%, 100% {
+    transform: translateY(0) translateX(0) scale(1);
+    opacity: 0.6;
+  }
+  25% {
+    transform: translateY(-40px) translateX(20px) scale(1.1);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-60px) translateX(-15px) scale(0.9);
+    opacity: 0.8;
+  }
+  75% {
+    transform: translateY(-30px) translateX(25px) scale(1.05);
+    opacity: 0.9;
+  }
+}
+
+/* CAPA 5: Líneas de Escaneo */
+.scan-lines-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.scan-line-bg {
+  position: absolute;
+  width: 300px;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(59, 130, 246, 0.9) 50%,
+    transparent 100%
+  );
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
+  animation: scanMove linear infinite;
+  opacity: 0.5;
+}
+
+@keyframes scanMove {
+  0% {
+    transform: translateX(-100%) translateY(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.7;
+  }
+  90% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateX(200vw) translateY(80px);
+    opacity: 0;
+  }
+}
+
+/* CAPA 6: Data Streams */
+.data-streams-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.data-stream-bg {
+  position: absolute;
+  width: 3px;
+  height: 200px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 255, 136, 0.7) 50%,
+    transparent 100%
+  );
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.6);
+  animation: streamFall linear infinite;
+  opacity: 0.5;
+}
+
+@keyframes streamFall {
+  0% {
+    transform: translateY(-200px);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.7;
+  }
+  90% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+/* Overlay para contenido */
+.content-overlay {
+  position: relative;
+  z-index: 10;
+  min-height: 100vh;
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+.glass-effect {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: scale(1.05);
+  box-shadow: 0 20px 40px rgba(59, 130, 246, 0.2);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Scrollbar */
+body::-webkit-scrollbar {
+  width: 10px;
+}
+
+body::-webkit-scrollbar-track {
+  background: #0a0e27;
+}
+
+body::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.6), rgba(0, 255, 136, 0.6));
+  border-radius: 5px;
+}
+
+body::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.9), rgba(0, 255, 136, 0.9));
+}
+
+/* Estilos para contenido de prueba */
+.test-content {
+  padding: 100px 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.test-content h2 {
+  font-size: 3rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #3b82f6, #00ff88);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 2rem;
+}
+
+.test-content p {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 1.5rem;
+}

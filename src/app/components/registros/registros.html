@@ -1,0 +1,50 @@
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-shield-lock"></i> Historial de Accesos</h2>
+    <button class="btn btn-primary btn-sm" (click)="cargarRegistros()">Actualizar</button>
+  </div>
+
+  @if (loading) {
+    <div class="text-center">Cargando registros...</div>
+  }
+
+  @if (error) {
+    <div class="alert alert-danger">{{ error }}</div>
+  }
+
+  @if (!loading && !error) {
+    <div class="table-responsive shadow-sm rounded">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-dark">
+          <tr>
+            <th>Fecha y Hora</th>
+            <th>Empleado</th>
+            <th>Área</th>
+            <th>Estado</th>
+            <th>Motivo</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (reg of registros; track reg.registro_id) {
+            <tr>
+              <td><small class="text-muted">{{ reg.fecha_formateada }}</small></td>
+              <td>
+                <strong>{{ reg.usuario_nombre || 'Sujeto Desconocido' }}</strong><br>
+                <span class="badge bg-light text-dark">{{ reg.rol_nombre }}</span>
+              </td>
+              <td>{{ reg.area_nombre }}</td>
+              <td>
+                <span [class]="reg.permitido ? 'badge bg-success' : 'badge bg-danger'">
+                  {{ reg.estado }}
+                </span>
+              </td>
+              <td>
+                <small class="text-danger">{{ reg.motivo_denegacion || '-' }}</small>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
