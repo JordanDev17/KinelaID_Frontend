@@ -1,0 +1,496 @@
+<section class="sv-page" #servicesSection>
+
+  <!-- ══════════════════════════════════════
+       HEADER
+  ══════════════════════════════════════ -->
+  <div class="sv-header">
+
+    <div class="sv-header-eyebrow">
+      <span class="sv-ey-line"></span>
+      <span class="sv-ey-text">KINELA·ID · MÓDULOS DE SERVICIO · v3.0</span>
+      <span class="sv-ey-line sv-ey-line--r"></span>
+    </div>
+
+    <h2 class="sv-header-title">
+      <span class="sv-ht-line">NUESTROS</span>
+      <span class="sv-ht-line sv-ht-line--accent">SERVICIOS</span>
+    </h2>
+
+    <p class="sv-header-desc">
+      Infraestructura biométrica de próxima generación.<br/>
+      Cada módulo es un sistema autónomo, escalable y auditado en tiempo real.
+    </p>
+
+    <!-- Línea divisora animada -->
+    <div class="sv-header-rule">
+      <div class="sv-rule-track">
+        <div class="sv-rule-fill"></div>
+      </div>
+      <span class="sv-rule-dot"></span>
+      <div class="sv-rule-track">
+        <div class="sv-rule-fill sv-rule-fill--r"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════
+       FEATURED SERVICE (card grande)
+  ══════════════════════════════════════ -->
+  <div class="sv-featured" (mouseenter)="onCardHover('featured')" (mouseleave)="onCardLeave('featured')">
+
+    <!-- SVG biométrico de fondo -->
+    <div class="sv-featured-bg">
+      <svg class="sv-bg-svg" viewBox="0 0 600 400" preserveAspectRatio="xMidYMid slice">
+        <!-- Retícula de puntos -->
+        <defs>
+          <pattern id="dot-grid" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="1" fill="rgba(0,240,255,0.15)"/>
+          </pattern>
+          <radialGradient id="face-glow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="rgba(0,240,255,0.15)"/>
+            <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+          </radialGradient>
+        </defs>
+        <rect width="600" height="400" fill="url(#dot-grid)"/>
+        <ellipse cx="300" cy="200" rx="180" ry="160" fill="url(#face-glow)"/>
+        <!-- Contorno facial esquemático -->
+        <path class="sv-face-path" d="M 240 120 Q 200 140 195 200 Q 190 260 220 290 Q 250 310 300 312 Q 350 310 380 290 Q 410 260 405 200 Q 400 140 360 120 Q 330 105 300 104 Q 270 105 240 120 Z" fill="none" stroke="rgba(0,240,255,0.18)" stroke-width="1.5"/>
+        <!-- Líneas de escáner -->
+        <line class="sv-scan-h" x1="150" y1="200" x2="450" y2="200" stroke="rgba(0,240,255,0.4)" stroke-width="1"/>
+        <!-- Puntos de referencia facial -->
+        <circle cx="265" cy="175" r="3" fill="none" stroke="rgba(0,240,255,0.5)" stroke-width="1"/>
+        <circle cx="335" cy="175" r="3" fill="none" stroke="rgba(0,240,255,0.5)" stroke-width="1"/>
+        <circle cx="300" cy="220" r="2" fill="rgba(0,240,255,0.4)"/>
+        <path d="M 275 245 Q 300 260 325 245" fill="none" stroke="rgba(0,240,255,0.4)" stroke-width="1.5"/>
+        <!-- Líneas de medición -->
+        <line x1="240" y1="165" x2="220" y2="145" stroke="rgba(0,240,255,0.2)" stroke-width="1"/>
+        <line x1="360" y1="165" x2="380" y2="145" stroke="rgba(0,240,255,0.2)" stroke-width="1"/>
+        <line x1="200" y1="145" x2="220" y2="145" stroke="rgba(0,240,255,0.3)" stroke-width="1"/>
+        <line x1="380" y1="145" x2="400" y2="145" stroke="rgba(0,240,255,0.3)" stroke-width="1"/>
+        <!-- Triangulación -->
+        <polygon points="300,80 260,150 340,150" fill="none" stroke="rgba(0,240,255,0.08)" stroke-width="1"/>
+        <!-- Anillo exterior -->
+        <circle cx="300" cy="200" r="170" fill="none" stroke="rgba(0,240,255,0.06)" stroke-width="1" stroke-dasharray="8 4"/>
+      </svg>
+
+      <!-- Línea de escaneo animada -->
+      <div class="sv-scan-line"></div>
+    </div>
+
+    <div class="sv-featured-content">
+
+      <div class="sv-card-meta">
+        <span class="sv-card-id">SVC·001</span>
+        <span class="sv-card-status sv-card-status--active">
+          <span class="sv-status-pip"></span>
+          ACTIVO
+        </span>
+      </div>
+
+      <!-- Icono SVG del servicio -->
+      <div class="sv-featured-icon">
+        <svg viewBox="0 0 80 80" width="80" height="80">
+          <circle cx="40" cy="40" r="36" fill="none" stroke="rgba(0,240,255,0.2)" stroke-width="1"/>
+          <circle cx="40" cy="40" r="28" fill="none" stroke="rgba(0,240,255,0.35)" stroke-width="1.5" stroke-dasharray="6 3" class="sv-icon-spin"/>
+          <!-- Iris biométrico -->
+          <circle cx="40" cy="40" r="18" fill="rgba(0,240,255,0.06)" stroke="rgba(0,240,255,0.6)" stroke-width="1.5"/>
+          <circle cx="40" cy="40" r="8" fill="rgba(0,240,255,0.15)" stroke="rgba(0,240,255,0.9)" stroke-width="1"/>
+          <circle cx="40" cy="40" r="3" fill="#00f0ff"/>
+          <!-- Rayos del iris -->
+          <line x1="40" y1="22" x2="40" y2="28" stroke="rgba(0,240,255,0.5)" stroke-width="1"/>
+          <line x1="40" y1="52" x2="40" y2="58" stroke="rgba(0,240,255,0.5)" stroke-width="1"/>
+          <line x1="22" y1="40" x2="28" y2="40" stroke="rgba(0,240,255,0.5)" stroke-width="1"/>
+          <line x1="52" y1="40" x2="58" y2="40" stroke="rgba(0,240,255,0.5)" stroke-width="1"/>
+          <line x1="27" y1="27" x2="31" y2="31" stroke="rgba(0,240,255,0.3)" stroke-width="1"/>
+          <line x1="53" y1="27" x2="49" y2="31" stroke="rgba(0,240,255,0.3)" stroke-width="1"/>
+          <line x1="27" y1="53" x2="31" y2="49" stroke="rgba(0,240,255,0.3)" stroke-width="1"/>
+          <line x1="53" y1="53" x2="49" y2="49" stroke="rgba(0,240,255,0.3)" stroke-width="1"/>
+        </svg>
+      </div>
+
+      <h3 class="sv-featured-title">Reconocimiento Facial</h3>
+      <p class="sv-featured-subtitle">BIOMETRIC · IDENTITY · CORE</p>
+      <p class="sv-featured-desc">
+        Motor de reconocimiento facial de alta precisión con detección en tiempo real,
+        análisis de vivacidad y mapeo de 468 puntos de referencia facial.
+        Procesamiento on-device con latencia sub-100ms.
+      </p>
+
+      <div class="sv-featured-specs">
+        <div class="sv-spec">
+          <span class="sv-spec-val">99.7<small>%</small></span>
+          <span class="sv-spec-lbl">PRECISIÓN</span>
+        </div>
+        <div class="sv-spec">
+          <span class="sv-spec-val">&lt;80<small>ms</small></span>
+          <span class="sv-spec-lbl">LATENCIA</span>
+        </div>
+        <div class="sv-spec">
+          <span class="sv-spec-val">468</span>
+          <span class="sv-spec-lbl">LANDMARKS</span>
+        </div>
+      </div>
+
+      <button class="sv-btn-explore" (click)="exploreService('facial')">
+        <span class="sv-btn-text">EXPLORAR MÓDULO</span>
+        <span class="sv-btn-icon">
+          <svg viewBox="0 0 20 20" width="16" height="16">
+            <path d="M4 10h12M11 5l5 5-5 5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          </svg>
+        </span>
+      </button>
+
+    </div>
+
+    <!-- Esquinas HUD -->
+    <div class="sv-corner sv-corner--tl"></div>
+    <div class="sv-corner sv-corner--tr"></div>
+    <div class="sv-corner sv-corner--bl"></div>
+    <div class="sv-corner sv-corner--br"></div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════
+       GRID DE SERVICIOS SECUNDARIOS
+  ══════════════════════════════════════ -->
+  <div class="sv-grid">
+
+    <!-- ── CARD: Control de Acceso ── -->
+    <div class="sv-card" (mouseenter)="onCardHover('access')" (mouseleave)="onCardLeave('access')">
+      <div class="sv-card-scan"></div>
+
+      <div class="sv-card-meta">
+        <span class="sv-card-id">SVC·002</span>
+        <span class="sv-card-status sv-card-status--active">
+          <span class="sv-status-pip"></span>ACTIVO
+        </span>
+      </div>
+
+      <div class="sv-card-icon sv-card-icon--green">
+        <svg viewBox="0 0 60 60" width="56" height="56">
+          <rect x="18" y="28" width="24" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M23 28v-6a7 7 0 0 1 14 0v6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="30" cy="38" r="3" fill="currentColor" opacity="0.7"/>
+          <line x1="30" y1="41" x2="30" y2="44" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <!-- Aura de seguridad -->
+          <circle cx="30" cy="30" r="24" fill="none" stroke="currentColor" stroke-width="0.5" stroke-dasharray="4 6" opacity="0.3" class="sv-icon-spin"/>
+          <!-- Check exterior -->
+          <path d="M10 30 L14 34 L20 26" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+        </svg>
+      </div>
+
+      <h3 class="sv-card-title">Control de Acceso</h3>
+      <p class="sv-card-sub">ACCESS · CONTROL · GATE</p>
+      <p class="sv-card-desc">
+        Gestión inteligente de accesos con autorización biométrica
+        multinivel. Integración con torniquetes, puertas y sistemas CCTV.
+      </p>
+
+      <div class="sv-card-tags">
+        <span class="sv-tag">Torniquetes</span>
+        <span class="sv-tag">RFID</span>
+        <span class="sv-tag">Multi-factor</span>
+      </div>
+
+      <div class="sv-card-footer">
+        <span class="sv-card-stat">
+          <span class="sv-stat-n sv-stat-n--green">24/7</span>
+          <span class="sv-stat-l">COBERTURA</span>
+        </span>
+        <button class="sv-card-btn" (click)="exploreService('access')">VER →</button>
+      </div>
+
+      <div class="sv-corner sv-corner--tl"></div>
+      <div class="sv-corner sv-corner--br"></div>
+    </div>
+
+    <!-- ── CARD: Registro Biométrico ── -->
+    <div class="sv-card" (mouseenter)="onCardHover('register')" (mouseleave)="onCardLeave('register')">
+      <div class="sv-card-scan"></div>
+
+      <div class="sv-card-meta">
+        <span class="sv-card-id">SVC·003</span>
+        <span class="sv-card-status sv-card-status--active">
+          <span class="sv-status-pip"></span>ACTIVO
+        </span>
+      </div>
+
+      <div class="sv-card-icon sv-card-icon--amber">
+        <svg viewBox="0 0 60 60" width="56" height="56">
+          <!-- Huella dactilar -->
+          <path d="M30 10 C18 10 10 18 10 30 C10 42 18 50 30 50" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M30 15 C21 15 14 21 14 30 C14 39 21 45 30 45" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M30 20 C23 20 18 24 18 30 C18 36 23 40 30 40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M30 25 C26 25 22 27 22 30 C22 33 25 35 30 35" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="30" cy="30" r="2" fill="currentColor"/>
+          <!-- Lado derecho espejado -->
+          <path d="M30 10 C42 10 50 18 50 30 C50 42 42 50 30 50" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+          <path d="M30 15 C39 15 46 21 46 30 C46 39 39 45 30 45" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+          <path d="M30 20 C37 20 42 24 42 30 C42 36 37 40 30 40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/>
+          <!-- scan line -->
+          <line x1="8" y1="30" x2="52" y2="30" stroke="currentColor" stroke-width="0.8" opacity="0.4" class="sv-scan-h-anim"/>
+        </svg>
+      </div>
+
+      <h3 class="sv-card-title">Registro Biométrico</h3>
+      <p class="sv-card-sub">ENROLL · BIOMETRIC · DB</p>
+      <p class="sv-card-desc">
+        Captura y enrolamiento de identidades biométricas.
+        Soporte para huella, rostro e iris. Base de datos encriptada y auditable.
+      </p>
+
+      <div class="sv-card-tags">
+        <span class="sv-tag">Huella</span>
+        <span class="sv-tag">Iris</span>
+        <span class="sv-tag">AES-256</span>
+      </div>
+
+      <div class="sv-card-footer">
+        <span class="sv-card-stat">
+          <span class="sv-stat-n sv-stat-n--amber">1M+</span>
+          <span class="sv-stat-l">REGISTROS</span>
+        </span>
+        <button class="sv-card-btn" (click)="exploreService('register')">VER →</button>
+      </div>
+
+      <div class="sv-corner sv-corner--tl"></div>
+      <div class="sv-corner sv-corner--br"></div>
+    </div>
+
+    <!-- ── CARD: Analítica de Personas ── -->
+    <div class="sv-card" (mouseenter)="onCardHover('analytics')" (mouseleave)="onCardLeave('analytics')">
+      <div class="sv-card-scan"></div>
+
+      <div class="sv-card-meta">
+        <span class="sv-card-id">SVC·004</span>
+        <span class="sv-card-status sv-card-status--beta">
+          <span class="sv-status-pip"></span>BETA
+        </span>
+      </div>
+
+      <div class="sv-card-icon sv-card-icon--purple">
+        <svg viewBox="0 0 60 60" width="56" height="56">
+          <!-- Gráfico de barras con silueta humana -->
+          <rect x="8"  y="38" width="8" height="14" rx="1" fill="currentColor" opacity="0.4"/>
+          <rect x="20" y="28" width="8" height="24" rx="1" fill="currentColor" opacity="0.6"/>
+          <rect x="32" y="18" width="8" height="34" rx="1" fill="currentColor" opacity="0.8"/>
+          <rect x="44" y="30" width="8" height="22" rx="1" fill="currentColor" opacity="0.5"/>
+          <!-- Línea de tendencia -->
+          <polyline points="12,36 24,26 36,16 48,28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- Puntos en la línea -->
+          <circle cx="12" cy="36" r="2.5" fill="currentColor"/>
+          <circle cx="24" cy="26" r="2.5" fill="currentColor"/>
+          <circle cx="36" cy="16" r="2.5" fill="currentColor"/>
+          <circle cx="48" cy="28" r="2.5" fill="currentColor"/>
+          <!-- Grid de fondo -->
+          <line x1="6" y1="52" x2="54" y2="52" stroke="currentColor" stroke-width="0.5" opacity="0.3"/>
+          <line x1="6" y1="8"  x2="6"  y2="52" stroke="currentColor" stroke-width="0.5" opacity="0.3"/>
+        </svg>
+      </div>
+
+      <h3 class="sv-card-title">Analítica de Personas</h3>
+      <p class="sv-card-sub">PEOPLE · ANALYTICS · AI</p>
+      <p class="sv-card-desc">
+        Conteo, flujo y análisis de comportamiento de personas.
+        Dashboards en tiempo real con alertas configurables y reportes automáticos.
+      </p>
+
+      <div class="sv-card-tags">
+        <span class="sv-tag">Heat maps</span>
+        <span class="sv-tag">Conteo</span>
+        <span class="sv-tag">Alertas</span>
+      </div>
+
+      <div class="sv-card-footer">
+        <span class="sv-card-stat">
+          <span class="sv-stat-n sv-stat-n--purple">RT</span>
+          <span class="sv-stat-l">TIEMPO REAL</span>
+        </span>
+        <button class="sv-card-btn" (click)="exploreService('analytics')">VER →</button>
+      </div>
+
+      <div class="sv-corner sv-corner--tl"></div>
+      <div class="sv-corner sv-corner--br"></div>
+    </div>
+
+    <!-- ── CARD: Integración API ── -->
+    <div class="sv-card" (mouseenter)="onCardHover('api')" (mouseleave)="onCardLeave('api')">
+      <div class="sv-card-scan"></div>
+
+      <div class="sv-card-meta">
+        <span class="sv-card-id">SVC·005</span>
+        <span class="sv-card-status sv-card-status--active">
+          <span class="sv-status-pip"></span>ACTIVO
+        </span>
+      </div>
+
+      <div class="sv-card-icon sv-card-icon--red">
+        <svg viewBox="0 0 60 60" width="56" height="56">
+          <!-- Nodos de red -->
+          <circle cx="30" cy="30" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <circle cx="10" cy="15" r="4" fill="none" stroke="currentColor" stroke-width="1.2"/>
+          <circle cx="50" cy="15" r="4" fill="none" stroke="currentColor" stroke-width="1.2"/>
+          <circle cx="10" cy="45" r="4" fill="none" stroke="currentColor" stroke-width="1.2"/>
+          <circle cx="50" cy="45" r="4" fill="none" stroke="currentColor" stroke-width="1.2"/>
+          <circle cx="30" cy="8"  r="3" fill="currentColor" opacity="0.6"/>
+          <circle cx="30" cy="52" r="3" fill="currentColor" opacity="0.6"/>
+          <!-- Conexiones -->
+          <line x1="30" y1="24" x2="14" y2="17" stroke="currentColor" stroke-width="1" opacity="0.6"/>
+          <line x1="30" y1="24" x2="46" y2="17" stroke="currentColor" stroke-width="1" opacity="0.6"/>
+          <line x1="30" y1="36" x2="14" y2="43" stroke="currentColor" stroke-width="1" opacity="0.6"/>
+          <line x1="30" y1="36" x2="46" y2="43" stroke="currentColor" stroke-width="1" opacity="0.6"/>
+          <line x1="30" y1="24" x2="30" y2="11" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+          <line x1="30" y1="36" x2="30" y2="49" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+          <!-- Pulso en el centro -->
+          <circle cx="30" cy="30" r="12" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.2" class="sv-icon-pulse"/>
+        </svg>
+      </div>
+
+      <h3 class="sv-card-title">Integración API</h3>
+      <p class="sv-card-sub">REST · SDK · WEBHOOKS</p>
+      <p class="sv-card-desc">
+        API REST documentada + SDKs para Android, iOS y Web.
+        Webhooks en tiempo real y soporte para sistemas legacy mediante adaptadores.
+      </p>
+
+      <div class="sv-card-tags">
+        <span class="sv-tag">REST</span>
+        <span class="sv-tag">WebSocket</span>
+        <span class="sv-tag">SDK</span>
+      </div>
+
+      <div class="sv-card-footer">
+        <span class="sv-card-stat">
+          <span class="sv-stat-n sv-stat-n--red">99.9<small>%</small></span>
+          <span class="sv-stat-l">UPTIME API</span>
+        </span>
+        <button class="sv-card-btn" (click)="exploreService('api')">VER →</button>
+      </div>
+
+      <div class="sv-corner sv-corner--tl"></div>
+      <div class="sv-corner sv-corner--br"></div>
+    </div>
+
+    <!-- ── CARD: Vigilancia Inteligente ── -->
+    <div class="sv-card sv-card--wide" (mouseenter)="onCardHover('surveillance')" (mouseleave)="onCardLeave('surveillance')">
+      <div class="sv-card-scan"></div>
+
+      <!-- Fondo con retícula de cámara -->
+      <div class="sv-card-wide-bg">
+        <svg viewBox="0 0 400 180" preserveAspectRatio="xMidYMid slice" width="100%" height="100%">
+          <defs>
+            <pattern id="cam-grid" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(255,51,102,0.07)" stroke-width="0.5"/>
+            </pattern>
+          </defs>
+          <rect width="400" height="180" fill="url(#cam-grid)"/>
+          <!-- Retícula de visor de cámara -->
+          <circle cx="200" cy="90" r="60" fill="none" stroke="rgba(255,51,102,0.12)" stroke-width="1"/>
+          <circle cx="200" cy="90" r="40" fill="none" stroke="rgba(255,51,102,0.1)" stroke-width="0.5"/>
+          <line x1="200" y1="20" x2="200" y2="160" stroke="rgba(255,51,102,0.08)" stroke-width="0.5"/>
+          <line x1="130" y1="90" x2="270" y2="90" stroke="rgba(255,51,102,0.08)" stroke-width="0.5"/>
+          <!-- Esquinas de encuadre -->
+          <path d="M 100 40 L 100 60 L 120 60" fill="none" stroke="rgba(255,51,102,0.3)" stroke-width="1.5"/>
+          <path d="M 300 40 L 300 60 L 280 60" fill="none" stroke="rgba(255,51,102,0.3)" stroke-width="1.5"/>
+          <path d="M 100 140 L 100 120 L 120 120" fill="none" stroke="rgba(255,51,102,0.3)" stroke-width="1.5"/>
+          <path d="M 300 140 L 300 120 L 280 120" fill="none" stroke="rgba(255,51,102,0.3)" stroke-width="1.5"/>
+        </svg>
+      </div>
+
+      <div class="sv-card-wide-content">
+
+        <div class="sv-card-meta">
+          <span class="sv-card-id">SVC·006</span>
+          <span class="sv-card-status sv-card-status--active">
+            <span class="sv-status-pip"></span>ACTIVO
+          </span>
+        </div>
+
+        <div class="sv-card-wide-body">
+
+          <div class="sv-card-wide-left">
+            <div class="sv-card-icon sv-card-icon--red">
+              <svg viewBox="0 0 60 60" width="56" height="56">
+                <!-- Cámara de seguridad -->
+                <rect x="12" y="22" width="28" height="20" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <circle cx="26" cy="32" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <circle cx="26" cy="32" r="3" fill="currentColor" opacity="0.5"/>
+                <path d="M40 27 L52 22 L52 42 L40 37 Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                <circle cx="46" cy="20" r="3" fill="currentColor" class="sv-icon-pulse" opacity="0.8"/>
+                <!-- Campo de visión -->
+                <path d="M52 32 Q60 20 60 32 Q60 44 52 32" fill="currentColor" opacity="0.1"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="sv-card-title">Vigilancia Inteligente</h3>
+              <p class="sv-card-sub">CCTV · AI · SURVEILLANCE</p>
+            </div>
+          </div>
+
+          <p class="sv-card-desc sv-card-desc--wide">
+            Sistema de videovigilancia potenciado con IA. Detección de intrusos,
+            reconocimiento de matrículas, análisis forense de video y alertas
+            automáticas integradas con biometría facial en tiempo real.
+          </p>
+
+          <div class="sv-card-wide-stats">
+            <div class="sv-wide-stat">
+              <span class="sv-stat-n sv-stat-n--red">360°</span>
+              <span class="sv-stat-l">COBERTURA</span>
+            </div>
+            <div class="sv-wide-stat">
+              <span class="sv-stat-n sv-stat-n--red">4K</span>
+              <span class="sv-stat-l">RESOLUCIÓN</span>
+            </div>
+            <div class="sv-wide-stat">
+              <span class="sv-stat-n sv-stat-n--red">&lt;2s</span>
+              <span class="sv-stat-l">DETECCIÓN</span>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="sv-card-tags">
+          <span class="sv-tag">LPR</span>
+          <span class="sv-tag">Intrusión</span>
+          <span class="sv-tag">Forense</span>
+          <span class="sv-tag">Multi-cámara</span>
+        </div>
+
+        <button class="sv-btn-explore sv-btn-explore--red" (click)="exploreService('surveillance')">
+          <span class="sv-btn-text">EXPLORAR MÓDULO</span>
+          <span class="sv-btn-icon">
+            <svg viewBox="0 0 20 20" width="16" height="16">
+              <path d="M4 10h12M11 5l5 5-5 5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+            </svg>
+          </span>
+        </button>
+
+      </div>
+
+      <div class="sv-corner sv-corner--tl"></div>
+      <div class="sv-corner sv-corner--tr"></div>
+      <div class="sv-corner sv-corner--bl"></div>
+      <div class="sv-corner sv-corner--br"></div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════
+       FOOTER CTA
+  ══════════════════════════════════════ -->
+  <div class="sv-cta">
+    <div class="sv-cta-inner">
+      <p class="sv-cta-label">¿NECESITAS UNA SOLUCIÓN A MEDIDA?</p>
+      <h3 class="sv-cta-title">Construimos lo que imaginas</h3>
+      <button class="sv-cta-btn" (click)="scrollToContact()">
+        <span>HABLAR CON EL EQUIPO</span>
+        <span class="sv-cta-arrow">→</span>
+      </button>
+    </div>
+    <!-- Línea de energía -->
+    <div class="sv-cta-line"></div>
+  </div>
+
+</section>

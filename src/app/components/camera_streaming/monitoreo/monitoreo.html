@@ -1,0 +1,123 @@
+<div class="min-h-screen  text-slate-200 p-4 md:p-8 font-sans selection:bg-green-500 selection:text-black">
+  <header class="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 border-b border-white/5 pb-6 gap-4">
+    <div>
+      <h1 class="text-4xl font-black tracking-tighter text-white uppercase">
+        KINELA<span class="text-green-500 inline-block animate-pulse">ID</span>
+      </h1>
+      <p class="text-slate-500 font-medium uppercase text-[10px] tracking-[0.2em]">Gestión de Vigilancia e Identidad Biométrica</p>
+    </div>
+    
+    <div class="flex items-center gap-4">
+      <button (click)="cargarDatos()" class="p-2 hover:bg-white/5 rounded-full transition-colors text-slate-400 hover:text-white">
+        <i class="fas fa-sync-alt" [class.animate-spin]="loading"></i>
+      </button>
+      <div class="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-full border border-white/10">
+        <div class="w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_12px_#22c55e]"></div>
+        <span class="text-[10px] font-bold tracking-widest uppercase">Sistema Activo</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="grid grid-cols-12 gap-8">
+    <aside class="col-span-12 lg:col-span-3 space-y-6">
+      <div class="bg-[#141417] p-6 rounded-3xl border border-white/5 shadow-2xl sticky top-8">
+        <h3 class="text-white font-bold mb-6 flex items-center gap-3">
+          <i class="fas fa-microchip text-green-500"></i> Vincular Dispositivo
+        </h3>
+        
+        <div class="space-y-5">
+          <div class="space-y-2">
+            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Nombre del Punto</label>
+            <input [(ngModel)]="nuevaCamara.nombre" 
+                   class="w-full bg-black/40 border border-white/10 p-3 rounded-xl outline-none focus:border-green-500/50 focus:ring-1 focus:ring-green-500/50 transition-all text-sm text-white placeholder:text-slate-700"
+                   placeholder="Ej: Acceso Principal">
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Cámara USB (Hardware)</label>
+            <div class="relative">
+              <select [(ngModel)]="nuevaCamara.hardware_index" 
+                      class="w-full bg-black/40 border border-white/10 p-3 rounded-xl outline-none focus:border-green-500/50 transition-all text-sm appearance-none text-white cursor-pointer">
+                @for (hw of puertosDisponibles; track $index) {
+                  <option [value]="hw.index" class="bg-[#141417]">{{ hw.label }}</option>
+                } @empty {
+                  <option disabled class="bg-[#141417]">Buscando dispositivos...</option>
+                }
+              </select>
+              <i class="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 pointer-events-none"></i>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Área Asignada</label>
+            <div class="relative">
+              <select [(ngModel)]="nuevaCamara.area" 
+                      class="w-full bg-black/40 border border-white/10 p-3 rounded-xl outline-none focus:border-green-500/50 transition-all text-sm appearance-none text-white cursor-pointer">
+                @for (area of areas; track area.id) {
+                  <option [value]="area.id" class="bg-[#141417]">{{ area.nombre }}</option>
+                }
+              </select>
+              <i class="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 pointer-events-none"></i>
+            </div>
+          </div>
+
+          <button (click)="registrarCamara()" 
+                  class="w-full bg-green-500 hover:bg-green-400 text-black font-black py-4 rounded-2xl transition-all transform active:scale-[0.97] shadow-lg shadow-green-500/10 text-[11px] uppercase tracking-[0.2em] mt-2">
+            Firmar Acceso
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="col-span-12 lg:col-span-9">
+      @if (loading && listaCamaras.length === 0) {
+        <div class="flex flex-col items-center justify-center h-[50vh] text-slate-600">
+          <div class="w-12 h-12 border-4 border-green-500/20 border-t-green-500 rounded-full animate-spin mb-4"></div>
+          <p class="text-[10px] font-bold uppercase tracking-widest">Sincronizando flujos de video...</p>
+        </div>
+      }
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        @for (cam of listaCamaras; track $index) {
+          <div class="group relative bg-[#141417] rounded-[2.5rem] overflow-hidden border border-white/5 hover:border-green-500/40 transition-all duration-500 shadow-2xl">
+            <div class="absolute top-0 left-0 right-0 p-6 z-20 flex justify-between items-start bg-gradient-to-b from-black/90 via-black/40 to-transparent">
+              <div class="flex flex-col gap-1">
+                <div class="flex items-center gap-2">
+                  <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                  <h4 class="text-white font-bold text-sm tracking-tight group-hover:text-green-400 transition-colors">{{ cam.nombre }}</h4>
+                </div>
+                <p class="text-[9px] text-slate-500 font-bold uppercase tracking-wider ml-3">{{ cam.nombre_area }}</p>
+              </div>
+              <button (click)="eliminarCamara(cam.id)" class="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white w-9 h-9 rounded-2xl flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 backdrop-blur-md">
+                <i class="fas fa-trash-alt text-xs"></i>
+              </button>
+            </div>
+
+            <div class="aspect-video bg-black flex items-center justify-center relative group-hover:scale-[1.02] transition-transform duration-700">
+              <img [src]="baseUrl + cam.stream_url" 
+                   class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500"
+                   (error)="handleSignalLoss($event)">
+              
+              <div class="absolute inset-0 bg-neutral-950/95 flex flex-col items-center justify-center hidden signal-loss-ui">
+                <i class="fas fa-video-slash text-red-500/30 text-5xl mb-3"></i>
+                <span class="text-[9px] font-black uppercase tracking-[0.4em] text-red-500/40">Señal no disponible</span>
+              </div>
+            </div>
+
+            <div class="absolute bottom-0 left-0 right-0 p-4 bg-black/60 backdrop-blur-sm flex justify-between items-center transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+              <span class="text-[9px] font-bold text-slate-400 uppercase">Hardware Index: {{ cam.hardware_index }}</span>
+              <i class="fas fa-expand text-slate-400 hover:text-white cursor-pointer transition-colors text-xs"></i>
+            </div>
+          </div>
+        } @empty {
+          @if (!loading) {
+            <div class="col-span-full h-80 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[3rem] bg-white/[0.02] text-slate-600">
+              <i class="fas fa-camera-retro text-5xl mb-6 opacity-20"></i>
+              <p class="text-xs font-bold uppercase tracking-[0.3em]">Sin terminales de video vinculadas</p>
+            </div>
+          }
+        }
+      </div>
+    </main>
+  </div>
+</div>

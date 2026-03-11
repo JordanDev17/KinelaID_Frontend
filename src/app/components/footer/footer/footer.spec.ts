@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { FaceVerify } from './face-verify';
+import { Footer } from './footer';
 
-describe('FaceVerify', () => {
-  let component: FaceVerify;
-  let fixture: ComponentFixture<FaceVerify>;
+describe('Footer', () => {
+  let component: Footer;
+  let fixture: ComponentFixture<Footer>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [FaceVerify]
+      imports: [Footer]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(FaceVerify);
+    fixture = TestBed.createComponent(Footer);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

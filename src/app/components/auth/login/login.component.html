@@ -1,48 +1,223 @@
+<!-- ============================================================
+     login.component.html — KinelaID Auth v2.1
+     
+     FIXES:
+     - @for track usa cam.id (PK real) → resuelve NG0955
+     - selector bindea selectedCamId y llama cambiarCamara()
+     - canvas siempre presente en el DOM (no condicional)
+       para que @ViewChild lo encuentre al capturar
+     - preview <img> solo para visualización
+     - captura real: fetch snapshot endpoint (sin tainted canvas)
+     ============================================================ -->
+
 <div class="min-h-screen w-full flex items-center justify-center relative overflow-hidden">
-  
-  <div #loginCard class="w-full max-w-[420px] bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-10 shadow-2xl z-10">
+
+  <div #loginCard
+       class="w-full max-w-[440px] bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-10 shadow-2xl z-10">
+
+    <!-- ── Header ── -->
     <div class="text-center mb-10">
       <h1 class="text-4xl font-black text-white tracking-tighter italic">
         KINELA<span class="text-[#00ff88]">ID</span>
       </h1>
-      <p class="text-gray-400 text-[10px] tracking-[0.3em] uppercase mt-2 font-medium">Security & Control</p>
+      <p class="text-gray-400 text-[10px] tracking-[0.3em] uppercase mt-2 font-medium">
+        Security &amp; Control
+      </p>
     </div>
 
+    <!-- ════════════════════════════════════════
+         PASO 1: CREDENCIALES
+    ════════════════════════════════════════ -->
     @if (step === 'CREDENTIALS') {
       <div class="form-content space-y-6">
+
         <div class="space-y-2">
-          <label class="text-[10px] uppercase tracking-widest text-[#00ff88] font-bold ml-2">Identidad</label>
+          <label class="text-[10px] uppercase tracking-widest text-[#00ff88] font-bold ml-2">
+            Identidad
+          </label>
           <input [(ngModel)]="credentials.username" type="text" placeholder="Usuario"
-                 class="w-full bg-white/10 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-[#00ff88] transition-all">
+                 class="w-full bg-white/10 border border-white/10 rounded-2xl p-4 text-white
+                        focus:outline-none focus:border-[#00ff88] transition-all"/>
         </div>
+
         <div class="space-y-2">
-          <label class="text-[10px] uppercase tracking-widest text-[#00ff88] font-bold ml-2">Llave</label>
+          <label class="text-[10px] uppercase tracking-widest text-[#00ff88] font-bold ml-2">
+            Llave
+          </label>
           <input [(ngModel)]="credentials.password" type="password" placeholder="••••••••"
-                 class="w-full bg-white/10 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-[#00ff88] transition-all">
+                 class="w-full bg-white/10 border border-white/10 rounded-2xl p-4 text-white
+                        focus:outline-none focus:border-[#00ff88] transition-all"/>
         </div>
+
         @if (errorMessage) {
-          <p class="text-red-400 text-xs text-center">{{ errorMessage }}</p>
+          <p class="text-red-400 text-xs text-center tracking-wide">{{ errorMessage }}</p>
         }
+
         <button (click)="onSubmit()" [disabled]="isLoading"
-                class="w-full bg-[#00ff88] text-[#070b14] font-black tracking-widest py-4 rounded-2xl active:scale-95 disabled:opacity-50 transition-all">
+                class="w-full bg-[#00ff88] text-[#070b14] font-black tracking-widest py-4
+                       rounded-2xl active:scale-95 disabled:opacity-50 transition-all">
           {{ isLoading ? 'PROCESANDO...' : 'ENTRAR' }}
         </button>
-      </div>
-    } @else {
-      <div class="biometric-content text-center space-y-6">
-        <div class="relative w-56 h-56 mx-auto">
-          <div class="pulse-ring absolute inset-0 border-2 border-[#00ff88] rounded-full"></div>
-          <div class="w-full h-full rounded-full bg-black overflow-hidden border-4 border-white/10 relative">
-             <video #videoFeed autoplay playsinline class="w-full h-full object-cover"></video>
-             <div class="scan-line-video"></div>
-          </div>
-        </div>
-        <p class="text-white text-sm font-medium tracking-wide">Escaneando rostro...</p>
-        <button (click)="captureAndVerify()" [disabled]="isLoading"
-                class="w-full bg-[#00ff88] text-[#070b14] font-black py-4 rounded-2xl shadow-lg active:scale-95 transition-all">
-          {{ isLoading ? 'VERIFICANDO...' : 'CONFIRMAR' }}
-        </button>
+
       </div>
     }
+
+    <!-- ════════════════════════════════════════
+         PASO 2: VERIFICACIÓN BIOMÉTRICA
+    ════════════════════════════════════════ -->
+    @if (step === 'BIOMETRIC') {
+      <div class="biometric-content space-y-5">
+
+        <!-- Selector de cámara (visible solo si hay ≥2 cámaras) -->
+        @if (camaras.length > 1) {
+          <div class="flex flex-col gap-1">
+            <label class="text-[9px] uppercase tracking-widest text-[#00ff88] font-bold ml-1">
+              Cámara de captura
+            </label>
+            <!--
+              CORRECCIÓN: se bindea a selectedCamId (número, id PK real).
+              cambiarCamara recibe el valor del <option> y lo convierte a Number.
+            -->
+            <select
+              [ngModel]="selectedCamId"
+              (ngModelChange)="cambiarCamara($event)"
+              class="bg-white/5 border border-white/10 rounded-xl p-3 text-white/70
+                     text-xs font-mono focus:outline-none focus:border-[#00ff88]">
+              <!--
+                CORRECCIÓN: track cam.id (PK real, siempre único).
+                Antes usaba cam.camara_id → undefined → NG0955.
+                El [value] es cam.id para que ngModelChange reciba el id correcto.
+              -->
+              @for (cam of camaras; track cam.id) {
+                <option [value]="cam.id">{{ getCamLabel(cam) }}</option>
+              }
+            </select>
+          </div>
+        }
+
+        <!-- Visor circular -->
+        <div class="relative w-64 h-64 mx-auto">
+          <div class="pulse-ring absolute inset-0 border-2 border-[#00ff88] rounded-full"></div>
+
+          <div class="w-full h-full rounded-full bg-black overflow-hidden border-4 border-white/10 relative">
+
+            <!--
+              MODO STREAM: <img> para previsualización VISUAL únicamente.
+              La captura real NO usa este <img> (evita tainted canvas).
+              La captura usa fetch() al endpoint /cameras/capture/{idx}/.
+            -->
+            @if (modoCaptura === 'stream' && streamPreviewUrl && !fotoCapturada) {
+              <img #streamImg
+                   [src]="streamPreviewUrl"
+                   (error)="onStreamError()"
+                   class="w-full h-full object-cover"
+                   alt="Preview stream"/>
+            }
+
+            <!-- MODO LOCAL: <video> de getUserMedia -->
+            @if (modoCaptura === 'local' && !fotoCapturada) {
+              <video #videoLocal autoplay playsinline
+                     class="w-full h-full object-cover"></video>
+            }
+
+            <!--
+              Canvas: siempre en el DOM pero oculto hasta que haya foto.
+              @ViewChild lo necesita disponible para la captura local.
+              En modo stream no se dibuja en canvas (se usa FileReader).
+            -->
+            <canvas #canvasCaptura
+                    [class.hidden]="!fotoCapturada"
+                    class="w-full h-full object-cover absolute inset-0"></canvas>
+
+            <!-- Línea de escaneo animada -->
+            @if (!fotoCapturada) {
+              <div class="scan-line-video"></div>
+            }
+
+            <!-- Indicador de foto capturada exitosamente -->
+            @if (fotoCapturada) {
+              <div class="absolute inset-0 flex flex-col items-center justify-center gap-2
+                          bg-[#00ff88]/10 border border-[#00ff88]/20 z-10">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
+                     stroke="#00ff88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M7 12l4 4 6-7"/>
+                </svg>
+                <span class="text-[#00ff88] text-[9px] font-black tracking-[4px]">CAPTURADO</span>
+              </div>
+            }
+
+            <!-- Indicador de captura en proceso -->
+            @if (capturando) {
+              <div class="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
+                <div class="w-8 h-8 border-2 border-white/10 border-t-[#00ff88] rounded-full animate-spin"></div>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Error del stream + botón fallback a cámara local -->
+        @if (streamError) {
+          <div class="flex flex-col items-center gap-2">
+            <p class="text-red-400 text-[9px] tracking-wide text-center">
+              ⚠ Stream no disponible — camera_hub inactivo
+            </p>
+            <button (click)="iniciarCamaraLocal()"
+                    class="text-[#00ff88] text-[9px] font-bold tracking-widest border
+                           border-[#00ff88]/30 px-4 py-2 rounded-xl hover:bg-[#00ff88]/10 transition-all">
+              USAR CÁMARA LOCAL
+            </button>
+          </div>
+        }
+
+        <!-- Indicador de modo activo -->
+        @if (!streamError && !fotoCapturada) {
+          <p class="text-white/30 text-[8px] tracking-widest uppercase text-center">
+            @if (modoCaptura === 'stream') {
+              ● STREAM · camera_hub · captura via snapshot
+            } @else {
+              ● CÁMARA LOCAL · getUserMedia
+            }
+          </p>
+        }
+
+        <!-- Mensaje de error de verificación -->
+        @if (errorMessage) {
+          <p class="text-red-400 text-xs text-center tracking-wide">{{ errorMessage }}</p>
+        }
+
+        <!-- Botones de acción -->
+        <div class="flex flex-col gap-3">
+
+          @if (!fotoCapturada && !capturando) {
+            <button (click)="capturarFrame()"
+                    class="w-full border border-[#00ff88]/30 text-[#00ff88] font-black
+                           tracking-widest py-3 rounded-2xl hover:bg-[#00ff88]/10 transition-all">
+              ⊙ CAPTURAR FRAME
+            </button>
+          }
+
+          <button (click)="captureAndVerify()" [disabled]="isLoading || capturando"
+                  class="w-full bg-[#00ff88] text-[#070b14] font-black tracking-widest py-4
+                         rounded-2xl shadow-lg active:scale-95 transition-all disabled:opacity-50">
+            @if (isLoading) { VERIFICANDO IDENTIDAD... }
+            @else if (capturando) { CAPTURANDO... }
+            @else if (fotoCapturada) { CONFIRMAR IDENTIDAD }
+            @else { CAPTURAR Y VERIFICAR }
+          </button>
+
+          @if (fotoCapturada && !isLoading) {
+            <button (click)="repetirCaptura()"
+                    class="w-full border border-white/10 text-white/40 font-bold
+                           tracking-widest py-3 rounded-2xl hover:border-white/20 transition-all text-sm">
+              ↺ REPETIR CAPTURA
+            </button>
+          }
+
+        </div>
+
+      </div>
+    }
+
   </div>
 </div>

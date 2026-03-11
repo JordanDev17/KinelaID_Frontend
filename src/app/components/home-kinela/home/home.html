@@ -1,71 +1,280 @@
-<div class="page-container relative w-full bg-transparent">
-  
-  <div class="hero-black-bg fixed inset-0 bg-[#020202] z-0 pointer-events-none"></div>
+<div class="page-container relative w-full bg-transparent overflow-x-hidden">
 
-  <div #canvasContainer class="fixed inset-0 z-10 pointer-events-none"></div>
+  <!-- HERO BLACK FADE LAYER -->
+  <div class="hero-black-bg fixed inset-0 bg-[#020202] z-[5] pointer-events-none"></div>
 
-  <nav class="fixed top-0 w-full p-8 flex justify-between items-center z-50">
-    <div class="text-white font-black tracking-tighter text-2xl">
-      KINELA<span class="text-cyan-400">ID</span>
-    </div>
-    <div class="group relative">
-<button
-  (click)="goToLogin()"
-  class="cyber-btn px-6 py-2 text-xs tracking-[0.3em] relative overflow-hidden"
->
-  SECURE_LOGIN
-</button>
+  <!-- THREE CANVAS -->
+  <div #canvasContainer class="fixed inset-0 z-[10] pointer-events-none w-full h-full"></div>
+
+  <!-- ══════════════════════════════
+       NAV
+  ══════════════════════════════ -->
+  <nav class="hm-nav fixed top-0 w-full z-50">
+    <div class="hm-nav-inner">
+      <div class="hm-logo">
+        KINELA<span class="hm-logo-accent">ID</span>
+      </div>
+      <div class="hm-nav-right">
+        <span class="hm-nav-status">
+          <span class="hm-nav-pip"></span>
+          SISTEMA ACTIVO
+        </span>
+        <button (click)="goToLogin()" class="hm-btn-login">
+          SECURE_LOGIN
+        </button>
+      </div>
     </div>
   </nav>
 
-  <section class="relative h-screen flex flex-col items-center justify-center z-20">
-    <div class="text-center">
-      <h1 class="cyber-title text-[12vw] font-black leading-none tracking-tighter">
+  <!-- ══════════════════════════════
+       ESCENA 1 — HERO
+  ══════════════════════════════ -->
+  <section class="hm-hero relative h-screen flex flex-col items-center justify-center z-20">
+
+    <div class="hm-hero-inner text-center">
+
+      <!-- Eyebrow -->
+      <div class="hm-hero-eyebrow">
+        <span class="hm-ey-dot"></span>
+        <span class="hm-ey-text">BIOMETRIC SECURITY PLATFORM · v3.0</span>
+        <span class="hm-ey-dot"></span>
+      </div>
+
+      <!-- Título con chars -->
+      <h1 class="hm-hero-title">
         @for (char of titleChars; track $index) {
-          <span class="char cyber-char">{{ char }}</span>
+          <span class="char hm-char">{{ char }}</span>
         }
       </h1>
-      <div class="h-px w-32 bg-cyan-500 mx-auto my-8 shadow-[0_0_15px_#00f0ff]"></div>
-      <p class="text-cyan-400/60 text-xs tracking-[1em] uppercase">Biometric Protection System</p>
+
+      <!-- Línea divisora -->
+      <div class="hm-separator">
+        <div class="hm-sep-line"></div>
+        <div class="hm-sep-diamond"></div>
+        <div class="hm-sep-line"></div>
+      </div>
+
+      <p class="hm-subtitle">Sistema de Protección Biométrica</p>
+
+      <!-- Scroll indicator -->
+      <div class="hm-scroll-cue">
+        <span class="hm-scroll-label">SCROLL</span>
+        <div class="hm-scroll-bar">
+          <div class="hm-scroll-fill"></div>
+        </div>
+      </div>
+
     </div>
+
+    <!-- Esquinas decorativas del hero -->
+    <div class="hm-hero-corner hm-hero-corner--tl"></div>
+    <div class="hm-hero-corner hm-hero-corner--tr"></div>
+    <div class="hm-hero-corner hm-hero-corner--bl"></div>
+    <div class="hm-hero-corner hm-hero-corner--br"></div>
+
   </section>
 
-  <div class="h-[50vh] flex items-center justify-center">
-    <span class="text-[10px] text-cyan-500/20 tracking-[2em] animate-pulse">DECRYPTING_INFRASTRUCTURE...</span>
-  </div>
+  <!-- ══════════════════════════════
+       ESCENA 2 — ABOUT / TRANSICIÓN
+       ⚠️ CRÍTICA: este trigger ancla el modelo 3D.
+       No modificar clases about-section / carousel-section
+  ══════════════════════════════ -->
+  <section class="about-section relative min-h-screen z-20 flex items-center px-10 md:px-20">
 
-<section class="carousel-section relative min-h-screen opacity-0 translate-y-20 z-20 px-10 md:px-20">
-  <div class="mb-20">
-    <span class="text-cyan-400 text-xs tracking-widest">01 // CRYPTO_SOLUTIONS</span>
-    <h2 class="text-white text-5xl md:text-6xl font-black mt-4">
-      Nuestros Servicios
-    </h2>
-  </div>
+    <div class="hm-about-content">
 
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+      <span class="hm-section-index">01 // KINELA_VISION</span>
 
-    <div class="service-card p-8 group">
-      <h3 class="text-white text-xl font-bold">Gestión Biométrica</h3>
-      <p class="text-gray-500 text-sm mt-4">
-        Registro y autenticación facial avanzada con control por zonas.
-      </p>
+      <h2 class="hm-section-title">
+        Seguridad Biométrica<br/>
+        <span class="hm-title-accent">del Futuro</span>
+      </h2>
+
+      <!-- Bloque de texto con borde izquierdo -->
+      <div class="hm-about-body">
+        <p class="hm-about-text">
+          Kinela Future Tech redefine la autenticación biométrica mediante
+          inteligencia artificial avanzada, monitoreo en tiempo real y
+          análisis predictivo. Diseñamos sistemas que no solo protegen,
+          sino que <em class="hm-em">anticipan</em>.
+        </p>
+      </div>
+
+      <!-- Mini métricas inline -->
+      <div class="hm-about-stats">
+        <div class="hm-about-stat">
+          <span class="hm-about-stat-n">99.7<small>%</small></span>
+          <span class="hm-about-stat-l">PRECISIÓN</span>
+        </div>
+        <div class="hm-about-stat-divider"></div>
+        <div class="hm-about-stat">
+          <span class="hm-about-stat-n">&lt;80<small>ms</small></span>
+          <span class="hm-about-stat-l">LATENCIA</span>
+        </div>
+        <div class="hm-about-stat-divider"></div>
+        <div class="hm-about-stat">
+          <span class="hm-about-stat-n">24/7</span>
+          <span class="hm-about-stat-l">UPTIME</span>
+        </div>
+      </div>
+
     </div>
 
-    <div class="service-card p-8 group">
-      <h3 class="text-white text-xl font-bold">Auditoría en Tiempo Real</h3>
-      <p class="text-gray-500 text-sm mt-4">
-        Monitoreo de accesos y detección de intentos no autorizados.
-      </p>
+  </section>
+
+  <!-- ══════════════════════════════
+       ESCENA 3 — HISTORIA / IDENTIDAD
+       (reemplaza las 3 cards simples)
+       ⚠️ carousel-section ancla el modelo al salir
+  ══════════════════════════════ -->
+  <section class="carousel-section hm-identity-section relative min-h-screen z-20 px-10 md:px-20 flex flex-col justify-center">
+
+    <div class="hm-identity-header">
+      <span class="hm-section-index">02 // KINELA_ORIGINS</span>
+      <h2 class="hm-section-title">
+        Quiénes Somos
+        <span class="hm-title-accent"> · Nuestra Historia</span>
+      </h2>
     </div>
 
-    <div class="service-card p-8 group">
-      <h3 class="text-white text-xl font-bold">Reportes Inteligentes</h3>
-      <p class="text-gray-500 text-sm mt-4">
-        Generación de reportes exportables en PDF por fecha, zona y empleado.
-      </p>
+    <div class="hm-identity-grid">
+
+      <!-- ── Columna izquierda: Manifiesto ── -->
+      <div class="hm-manifesto">
+
+        <div class="hm-manifesto-card">
+          <div class="hm-manifesto-top">
+            <span class="hm-manifesto-tag">MISIÓN</span>
+            <div class="hm-manifesto-line"></div>
+          </div>
+          <p class="hm-manifesto-text">
+            Democratizar la seguridad biométrica de grado corporativo,
+            llevando tecnología de reconocimiento facial de alta precisión
+            a empresas de todos los tamaños en Latinoamérica.
+          </p>
+        </div>
+
+        <div class="hm-manifesto-card">
+          <div class="hm-manifesto-top">
+            <span class="hm-manifesto-tag">VISIÓN</span>
+            <div class="hm-manifesto-line"></div>
+          </div>
+          <p class="hm-manifesto-text">
+            Ser la infraestructura de identidad digital más confiable
+            de la región, donde cada acceso sea una experiencia
+            fluida, segura e inteligente.
+          </p>
+        </div>
+
+        <!-- Stack tecnológico -->
+        <div class="hm-tech-stack">
+          <span class="hm-tech-label">TECH_STACK</span>
+          <div class="hm-tech-tags">
+            <span class="hm-tech-tag">Angular</span>
+            <span class="hm-tech-tag">Three.js</span>
+            <span class="hm-tech-tag">TensorFlow</span>
+            <span class="hm-tech-tag">Node.js</span>
+            <span class="hm-tech-tag">MediaPipe</span>
+            <span class="hm-tech-tag">OpenCV</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── Columna derecha: Timeline ── -->
+      <div class="hm-timeline">
+
+        <div class="hm-timeline-track"></div>
+
+        <div class="hm-timeline-item">
+          <div class="hm-tl-dot hm-tl-dot--active"></div>
+          <div class="hm-tl-content">
+            <span class="hm-tl-year">2021</span>
+            <h4 class="hm-tl-title">Fundación</h4>
+            <p class="hm-tl-desc">
+              Nace Kinela en Mosquera, Cundinamarca.
+              Primeras pruebas de reconocimiento facial con MediaPipe.
+            </p>
+          </div>
+        </div>
+
+        <div class="hm-timeline-item">
+          <div class="hm-tl-dot"></div>
+          <div class="hm-tl-content">
+            <span class="hm-tl-year">2022</span>
+            <h4 class="hm-tl-title">Primer Despliegue</h4>
+            <p class="hm-tl-desc">
+              Sistema de control de acceso biométrico instalado
+              en cliente piloto. 500+ empleados gestionados.
+            </p>
+          </div>
+        </div>
+
+        <div class="hm-timeline-item">
+          <div class="hm-tl-dot"></div>
+          <div class="hm-tl-content">
+            <span class="hm-tl-year">2023</span>
+            <h4 class="hm-tl-title">Motor de IA Propio</h4>
+            <p class="hm-tl-desc">
+              Desarrollo del motor de reconocimiento con 468 landmarks.
+              Precisión alcanza 99.7% en condiciones reales.
+            </p>
+          </div>
+        </div>
+
+        <div class="hm-timeline-item">
+          <div class="hm-tl-dot hm-tl-dot--pulse"></div>
+          <div class="hm-tl-content">
+            <span class="hm-tl-year">2024 →</span>
+            <h4 class="hm-tl-title">KinelaID Platform</h4>
+            <p class="hm-tl-desc">
+              Lanzamiento de la plataforma completa: facial, huella,
+              analítica de personas, API pública y vigilancia IA.
+            </p>
+          </div>
+        </div>
+
+      </div>
+
     </div>
 
-  </div>
-</section>
+    <!-- Banda de métricas grandes en el fondo -->
+    <div class="hm-metrics-band">
+      <div class="hm-metric-big">
+        <span class="hm-metric-n">1M<small>+</small></span>
+        <span class="hm-metric-l">IDENTIDADES REGISTRADAS</span>
+      </div>
+      <div class="hm-metric-sep"></div>
+      <div class="hm-metric-big">
+        <span class="hm-metric-n">50<small>+</small></span>
+        <span class="hm-metric-l">CLIENTES ACTIVOS</span>
+      </div>
+      <div class="hm-metric-sep"></div>
+      <div class="hm-metric-big">
+        <span class="hm-metric-n">3</span>
+        <span class="hm-metric-l">AÑOS EN PRODUCCIÓN</span>
+      </div>
+      <div class="hm-metric-sep"></div>
+      <div class="hm-metric-big">
+        <span class="hm-metric-n">CO</span>
+        <span class="hm-metric-l">COLOMBIA · LATAM</span>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══════════════════════════════
+       ESCENA 4 — SERVICES COMPONENT
+  ══════════════════════════════ -->
+  <section class="relative z-20 flex items-center justify-center">
+    <app-services class="w-full"></app-services>
+  </section>
+
+  <!-- ══════════════════════════════
+       ESCENA 5 — CONTACT COMPONENT
+  ══════════════════════════════ -->
+  <section class="relative min-h-screen z-20 flex items-center justify-center">
+    <app-contact class="w-full"></app-contact>
+  </section>
 
 </div>

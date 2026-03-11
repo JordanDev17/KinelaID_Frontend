@@ -1,14 +1,23 @@
-import { Component, ElementRef, ViewChild, AfterViewInit, OnDestroy } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  ViewChild,
+  AfterViewInit,
+  OnDestroy
+} from '@angular/core';
 import { Router } from '@angular/router';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { Contact } from '../../modules/contact';
+import { Services } from "../../modules/services";
 
 gsap.registerPlugin(ScrollTrigger);
 
 @Component({
   selector: 'app-home',
+  imports: [Contact, Services],
   standalone: true,
   templateUrl: './home.html',
   styleUrl: './home.css',
@@ -23,27 +32,36 @@ export class Home implements AfterViewInit, OnDestroy {
   private scene!: THREE.Scene;
   private camera!: THREE.PerspectiveCamera;
   private renderer!: THREE.WebGLRenderer;
+
+  private keyLight!: THREE.DirectionalLight;
+  private rimLight!: THREE.PointLight;
+
   private mainModelGroup = new THREE.Group();
-  private carouselGroup = new THREE.Group();
-  private carouselModels: THREE.Object3D[] = [];
 
   private particles!: THREE.Points;
   private animationId!: number;
-  private observer!: IntersectionObserver;
-  private isVisible = true;
 
-  private targetRotation = { x: 0, y: 0 };
-  private currentRotation = { x: 0, y: 0 };
+  // Separación limpia de rotaciones
+  private scrollRotationY = Math.PI;
+  private mouseOffsetY = 0;
+  private mouseOffsetX = 0;
+
+  private targetMouseY = 0;
+  private targetMouseX = 0;
+
+  private interactionEnabled = true;
 
   public titleChars = 'KINELA·TECH'.split('');
+
+  // ============================
+  // INIT
+  // ============================
 
   ngAfterViewInit(): void {
     this.initThree();
     this.addGlobalParticles();
     this.loadMainBust();
-    this.loadCarouselModels();
-    this.setupProfessionalScroll();
-    this.setupVisibilityObserver();
+    this.setupScroll();
     this.animate();
 
     window.addEventListener('mousemove', this.onMouseMove);
@@ -51,8 +69,15 @@ export class Home implements AfterViewInit, OnDestroy {
     window.addEventListener('resize', this.onResize);
   }
 
-    // Go to login
-    public goToLogin(): void {
+  public handleContact(data: any): void {
+    console.log('Formulario recibido:', data);
+  }
+
+  // ============================
+  // NAVEGACIÓN
+  // ============================
+
+  public goToLogin(): void {
     gsap.to('.page-container', {
       opacity: 0,
       duration: 0.6,
@@ -62,13 +87,15 @@ export class Home implements AfterViewInit, OnDestroy {
     });
   }
 
-
-  // ---------- THREE CORE ----------
+  // ============================
+  // THREE CORE
+  // ============================
 
   private initThree(): void {
     const container = this.canvasRef.nativeElement;
 
     this.scene = new THREE.Scene();
+    this.scene.fog = new THREE.FogExp2(0x020202, 0.018);
 
     this.camera = new THREE.PerspectiveCamera(
       35,
@@ -77,12 +104,11 @@ export class Home implements AfterViewInit, OnDestroy {
       1000
     );
 
-    this.setResponsiveCamera();
+    this.camera.position.set(0, 0, 11);
 
     this.renderer = new THREE.WebGLRenderer({
       antialias: true,
-      alpha: true,
-      powerPreference: "high-performance"
+      alpha: true
     });
 
     this.renderer.setSize(container.clientWidth, container.clientHeight);
@@ -90,26 +116,22 @@ export class Home implements AfterViewInit, OnDestroy {
     container.appendChild(this.renderer.domElement);
 
     const ambient = new THREE.AmbientLight(0xffffff, 0.4);
-    const cyan = new THREE.DirectionalLight(0x00f0ff, 2);
-    cyan.position.set(5, 5, 5);
+    this.scene.add(ambient);
 
-    const magenta = new THREE.PointLight(0xff00ff, 1.5);
-    magenta.position.set(-5, -2, 2);
+    this.keyLight = new THREE.DirectionalLight(0x00eaff, 2);
+    this.keyLight.position.set(4, 5, 6);
+    this.scene.add(this.keyLight);
 
-    this.scene.add(ambient, cyan, magenta, this.mainModelGroup, this.carouselGroup);
+    this.rimLight = new THREE.PointLight(0xff00aa, 4, 40);
+    this.rimLight.position.set(-4, 2, 5);
+    this.scene.add(this.rimLight);
+
+    this.scene.add(this.mainModelGroup);
   }
 
-  private setResponsiveCamera() {
-    const isMobile = window.innerWidth < 768;
-
-    this.camera.position.set(
-      0,
-      0,
-      isMobile ? 16 : 12
-    );
-  }
-
-  // ---------- MODEL ----------
+  // ============================
+  // BUSTO 3D
+  // ============================
 
   private loadMainBust(): void {
     new GLTFLoader().load('/assets/models/model-headface.glb', (gltf) => {
@@ -118,96 +140,160 @@ export class Home implements AfterViewInit, OnDestroy {
       model.traverse((n: any) => {
         if (n.isMesh) {
           n.material = new THREE.MeshStandardMaterial({
-            color: 0xffffff,
-            metalness: 1,
-            roughness: 0.2
+            color: 0xcfd8dc,
+            metalness: 0.95,
+            roughness: 0.25
           });
         }
       });
 
       this.mainModelGroup.add(model);
-      this.mainModelGroup.rotation.y = Math.PI;
+      this.mainModelGroup.scale.setScalar(5);
 
-      this.applyResponsiveScale();
       this.runIntro();
     });
   }
 
-private loadCarouselModels(): void {
-  const loader = new GLTFLoader();
-  const assets = ['shield.glb', 'chip.glb', 'lock.glb'];
+  // ============================
+  // SCROLL CONTROL
+  // ⚠️ Triggers CRÍTICOS — dependen de .about-section y .carousel-section
+  // ============================
 
-  assets.forEach((file, index) => {
-    loader.load(`/assets/models/${file}`, (gltf) => {
+  private setupScroll(): void {
 
-      const model = gltf.scene;
-
-      model.traverse((n: any) => {
-        if (n.isMesh) {
-          n.material = new THREE.MeshStandardMaterial({
-            color: 0x00f0ff,
-            metalness: 0.9,
-            roughness: 0.3,
-            emissive: 0x001122,
-            emissiveIntensity: 0.8
-          });
-        }
-      });
-
-      model.scale.setScalar(0.7);
-
-      // posición alineada con scroll real
-      model.position.set(
-        (index - 1) * 5,
-        -14,
-        -6
-      );
-
-      this.carouselGroup.add(model);
-      this.carouselModels.push(model);
-    });
-  });
-}
-
-  private applyResponsiveScale() {
-    const isMobile = window.innerWidth < 768;
-    this.mainModelGroup.scale.setScalar(isMobile ? 4 : 5);
-  }
-
-  // ---------- SCROLL ----------
-
-  private setupProfessionalScroll(): void {
-    const tl = gsap.timeline({
+    // Fade del fondo negro al salir del hero
+    gsap.to('.hero-black-bg', {
       scrollTrigger: {
-        trigger: ".page-container",
-        start: "top top",
-        end: "bottom bottom",
-        scrub: 1.5,
-      }
+        trigger: '.about-section',
+        start: 'top 90%',
+        end: 'top 30%',
+        scrub: true
+      },
+      opacity: 0
     });
 
-    tl.to('.hero-black-bg', { opacity: 0, duration: 1 }, 0);
+    // Zoom de cámara al entrar en about
+    gsap.to(this.camera.position, {
+      scrollTrigger: {
+        trigger: '.about-section',
+        start: 'top bottom',
+        end: 'top center',
+        scrub: 1
+      },
+      z: 9
+    });
 
-    tl.to(this.mainModelGroup.position, { z: -10, y: 5, duration: 2 }, 0);
-    tl.to(this.mainModelGroup.rotation, { x: 1, duration: 2 }, 0);
+    // Rotación del modelo en about
+    gsap.to(this, {
+      scrollTrigger: {
+        trigger: '.about-section',
+        start: 'top center',
+        end: 'bottom center',
+        scrub: 1,
+        onEnter: () => this.interactionEnabled = false,
+        onLeaveBack: () => this.interactionEnabled = true
+      },
+      scrollRotationY: Math.PI - 0.5
+    });
 
-    tl.to(this.camera.position, { y: -15, duration: 3 }, 1);
+    // Desplazamiento lateral del modelo al entrar en about
+    gsap.to(this.mainModelGroup.position, {
+      scrollTrigger: {
+        trigger: '.about-section',
+        start: 'top center',
+        end: 'bottom center',
+        scrub: 1
+      },
+      x: 3
+    });
 
-    tl.to('.carousel-section', { opacity: 1, y: 0, duration: 2 }, 1.5);
+    // Salida del modelo al llegar a carousel-section (identity/historia)
+    gsap.to(this.mainModelGroup.position, {
+      scrollTrigger: {
+        trigger: '.carousel-section',
+        start: 'top center',
+        end: 'bottom center',
+        scrub: 1
+      },
+      y: 7,
+      z: -6
+    });
   }
 
-  // ---------- PERFORMANCE ----------
+  // ============================
+  // PARTICLES
+  // ============================
 
-  private setupVisibilityObserver() {
-    this.observer = new IntersectionObserver(
-      ([entry]) => this.isVisible = entry.isIntersecting,
-      { threshold: 0.1 }
-    );
+  private addGlobalParticles(): void {
+    const count = 3000;
+    const geometry = new THREE.BufferGeometry();
 
-    this.observer.observe(this.canvasRef.nativeElement);
+    const positions = new Float32Array(count * 3);
+    const colors = new Float32Array(count * 3);
+    const color = new THREE.Color();
+
+    for (let i = 0; i < count; i++) {
+      positions[i * 3]     = (Math.random() - 0.5) * 40;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 40;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 80;
+
+      color.setHSL(0.55 + Math.random() * 0.15, 0.8, 0.6);
+      colors[i * 3]     = color.r;
+      colors[i * 3 + 1] = color.g;
+      colors[i * 3 + 2] = color.b;
+    }
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    const texture = new THREE.TextureLoader().load('assets/textures/particle.png');
+
+    const material = new THREE.PointsMaterial({
+      size: 0.6,
+      map: texture,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.9,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+
+    this.particles = new THREE.Points(geometry, material);
+    this.scene.add(this.particles);
   }
 
-  // ---------- INTERACTION ----------
+  // ============================
+  // LOOP DE ANIMACIÓN
+  // ============================
+
+  private animate = () => {
+    this.animationId = requestAnimationFrame(this.animate);
+
+    this.mouseOffsetY += (this.targetMouseY - this.mouseOffsetY) * 0.05;
+    this.mouseOffsetX += (this.targetMouseX - this.mouseOffsetX) * 0.05;
+
+    if (!this.interactionEnabled) {
+      this.mouseOffsetY *= 0.9;
+      this.mouseOffsetX *= 0.9;
+    }
+
+    this.mainModelGroup.rotation.y = this.scrollRotationY + this.mouseOffsetY;
+    this.mainModelGroup.rotation.x = this.mouseOffsetX;
+
+    this.keyLight.position.x = this.mainModelGroup.position.x + 2;
+    this.keyLight.position.y = this.mainModelGroup.position.y + 3;
+
+    this.rimLight.position.x = this.mainModelGroup.position.x - 3;
+    this.rimLight.position.y = this.mainModelGroup.position.y + 1;
+
+    if (this.particles) this.particles.rotation.y += 0.0008;
+
+    this.renderer.render(this.scene, this.camera);
+  };
+
+  // ============================
+  // INTERACTION
+  // ============================
 
   private onMouseMove = (e: MouseEvent) =>
     this.handleInteraction(e.clientX, e.clientY);
@@ -216,82 +302,35 @@ private loadCarouselModels(): void {
     this.handleInteraction(e.touches[0].clientX, e.touches[0].clientY);
 
   private handleInteraction(x: number, y: number): void {
-    this.targetRotation.y = (x / window.innerWidth - 0.5) * 0.8;
-    this.targetRotation.x = (y / window.innerHeight - 0.5) * 0.4;
+    if (!this.interactionEnabled) return;
+    this.targetMouseY = (x / window.innerWidth  - 0.5) * 0.6;
+    this.targetMouseX = (y / window.innerHeight - 0.5) * 0.3;
   }
 
-  // ---------- LOOP ----------
-
-private animate = () => {
-  this.animationId = requestAnimationFrame(this.animate);
-
-  if (!this.isVisible) return;
-
-  this.currentRotation.x += (this.targetRotation.x - this.currentRotation.x) * 0.05;
-  this.currentRotation.y += (this.targetRotation.y - this.currentRotation.y) * 0.05;
-
-  this.mainModelGroup.rotation.x = this.currentRotation.x;
-  this.mainModelGroup.rotation.y = Math.PI + this.currentRotation.y;
-
-  if (this.particles) this.particles.rotation.y += 0.001;
-
-  // ✅ Rotación individual correcta
-    this.carouselModels.forEach((model, i) => {
-      const speed = 0.008 + i * 0.002;
-      model.rotation.y += speed;
-    });
-
-  this.renderer.render(this.scene, this.camera);
-};
-
-  private addGlobalParticles(): void {
-    const geo = new THREE.BufferGeometry();
-    const pos = new Float32Array(2000 * 3);
-
-    for (let i = 0; i < 2000 * 3; i++)
-      pos[i] = (Math.random() - 0.5) * 30;
-
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-
-    this.particles = new THREE.Points(
-      geo,
-      new THREE.PointsMaterial({
-        size: 0.02,
-        color: 0x00f0ff,
-        transparent: true,
-        opacity: 0.4
-      })
-    );
-
-    this.scene.add(this.particles);
-  }
+  private onResize = () => {
+    const container = this.canvasRef.nativeElement;
+    this.camera.aspect = container.clientWidth / container.clientHeight;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(container.clientWidth, container.clientHeight);
+  };
 
   private runIntro(): void {
+    // Selecciona tanto .char como .hm-char para compatibilidad
     gsap.from('.char', {
       opacity: 0,
       y: 50,
       stagger: 0.05,
       duration: 1,
-      ease: "power4.out"
+      ease: 'power4.out'
     });
   }
-
-  private onResize = () => {
-    const container = this.canvasRef.nativeElement;
-
-    this.camera.aspect = container.clientWidth / container.clientHeight;
-    this.camera.updateProjectionMatrix();
-
-    this.setResponsiveCamera();
-    this.applyResponsiveScale();
-
-    this.renderer.setSize(container.clientWidth, container.clientHeight);
-  };
 
   ngOnDestroy(): void {
     cancelAnimationFrame(this.animationId);
     this.renderer.dispose();
     ScrollTrigger.getAll().forEach(t => t.kill());
-    this.observer.disconnect();
+    window.removeEventListener('mousemove', this.onMouseMove);
+    window.removeEventListener('touchmove', this.onTouchMove);
+    window.removeEventListener('resize', this.onResize);
   }
 }

@@ -1,1 +1,1150 @@
-<p>dashboard works!</p>
+<!-- ============================================================
+     dashboard.html — KinelaID Command Center v3
+     Vistas: overview | empleados | logs | reportes | areas | usuarios-sistema | monitoreo
+     
+     CAMBIOS v3:
+     - Vista MONITOREO: matriz de video (streams M-JPEG de camera_hub)
+     - Permisos de área: corrección con modelo real (permiso_id, unique_together)
+     - Empleados: campo cargo removido (no existe en Usuario model)
+     - Cámara en modal empleado: consume stream centralizado en vez de getUserMedia
+     ============================================================ -->
+<div class="db-shell" [class.db-sidebar-collapsed]="sidebarCollapsed">
+
+  <!-- ═══════════════════════════════════════════
+       SIDEBAR
+  ═══════════════════════════════════════════ -->
+  <aside class="db-sidebar">
+
+    <div class="db-sidebar-logo">
+      <div class="db-logo-mark">
+        <svg viewBox="0 0 32 32" width="28" height="28">
+          <circle cx="16" cy="16" r="14" fill="none" stroke="var(--db-neon)" stroke-width="1" opacity="0.35"/>
+          <circle cx="16" cy="16" r="8"  fill="none" stroke="var(--db-neon)" stroke-width="1.5"/>
+          <circle cx="16" cy="16" r="3"  fill="var(--db-neon)"/>
+          <line x1="16" y1="2"  x2="16" y2="8"  stroke="var(--db-neon)" stroke-width="1.5" opacity="0.5"/>
+          <line x1="16" y1="24" x2="16" y2="30" stroke="var(--db-neon)" stroke-width="1.5" opacity="0.5"/>
+          <line x1="2"  y1="16" x2="8"  y2="16" stroke="var(--db-neon)" stroke-width="1.5" opacity="0.5"/>
+          <line x1="24" y1="16" x2="30" y2="16" stroke="var(--db-neon)" stroke-width="1.5" opacity="0.5"/>
+        </svg>
+      </div>
+      <div class="db-logo-text" *ngIf="!sidebarCollapsed">
+        <span class="db-logo-main">KINELA</span>
+        <span class="db-logo-sub">COMMAND</span>
+      </div>
+    </div>
+
+    <!-- Perfil del usuario autenticado -->
+    <div class="db-sidebar-user" *ngIf="!sidebarCollapsed">
+      <div class="db-user-avatar">
+        <span class="db-user-initials">{{ userInitials }}</span>
+        <div class="db-user-status-ring"></div>
+      </div>
+      <div class="db-user-info">
+        <span class="db-user-name">{{ currentUser?.nombre_completo || 'Operador' }}</span>
+        <span class="db-user-role">{{ currentUser?.rol_nombre || '—' }}</span>
+      </div>
+    </div>
+
+    <nav class="db-nav">
+
+      <!-- OVERVIEW: Admin + Op.Registro + Auditor -->
+      <button *ngIf="canView('overview')" class="db-nav-item"
+              [class.db-nav-item--active]="activeView==='overview'"
+              (click)="setView('overview')">
+        <span class="db-nav-icon">
+          <svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="2" y="2" width="7" height="7" rx="1"/><rect x="11" y="2" width="7" height="7" rx="1"/>
+            <rect x="2" y="11" width="7" height="7" rx="1"/><rect x="11" y="11" width="7" height="7" rx="1"/>
+          </svg>
+        </span>
+        <span class="db-nav-label" *ngIf="!sidebarCollapsed">OVERVIEW</span>
+        <span class="db-nav-badge" *ngIf="alertCount>0 && !sidebarCollapsed">{{ alertCount }}</span>
+      </button>
+
+      <!-- MONITOREO: Solo Administrador — acceso al VMS de camera_hub -->
+      <button *ngIf="canView('monitoreo')" class="db-nav-item db-nav-item--monitor"
+              [class.db-nav-item--active]="activeView==='monitoreo'"
+              (click)="setView('monitoreo')">
+        <span class="db-nav-icon">
+          <svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="1" y="3" width="14" height="10" rx="1"/>
+            <path d="M15 7l4-2v8l-4-2V7z"/>
+            <path d="M5 13v2M8 13v3M11 13v2" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="db-nav-label" *ngIf="!sidebarCollapsed">MONITOREO</span>
+        <!-- Indicador de streams activos -->
+        <span class="db-nav-pip" *ngIf="streamsActivos > 0 && !sidebarCollapsed">
+          {{ streamsActivos }}
+        </span>
+      </button>
+
+      <!-- EMPLEADOS: Admin + Op.Registro -->
+      <button *ngIf="canView('empleados')" class="db-nav-item"
+              [class.db-nav-item--active]="activeView==='empleados'"
+              (click)="setView('empleados')">
+        <span class="db-nav-icon">
+          <svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="10" cy="7" r="3"/>
+            <path d="M3 17c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="db-nav-label" *ngIf="!sidebarCollapsed">EMPLEADOS</span>
+      </button>
+
+      <!-- LOGS: Admin + Auditor -->
+      <button *ngIf="canView('logs')" class="db-nav-item"
+              [class.db-nav-item--active]="activeView==='logs'"
+              (click)="setView('logs')">
+        <span class="db-nav-icon">
+          <svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M3 5h14M3 10h10M3 15h7" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="db-nav-label" *ngIf="!sidebarCollapsed">LOGS ACCESO</span>
+      </button>
+
+      <!-- REPORTES: Admin + Auditor -->
+      <button *ngIf="canView('reportes')" class="db-nav-item"
+              [class.db-nav-item--active]="activeView==='reportes'"
+              (click)="setView('reportes')">
+        <span class="db-nav-icon">
+          <svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="4" y="2" width="12" height="16" rx="1"/>
+            <path d="M7 7h6M7 11h6M7 15h3" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="db-nav-label" *ngIf="!sidebarCollapsed">REPORTES</span>
+      </button>
+
+      <!-- ZONAS: Solo Admin -->
+      <button *ngIf="canView('areas')" class="db-nav-item"
+              [class.db-nav-item--active]="activeView==='areas'"
+              (click)="setView('areas')">
+        <span class="db-nav-icon">
+          <svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M10 2L2 7v11h16V7L10 2z"/>
+            <rect x="7" y="12" width="6" height="6"/>
+          </svg>
+        </span>
+        <span class="db-nav-label" *ngIf="!sidebarCollapsed">ZONAS</span>
+      </button>
+
+      <!-- USUARIOS SISTEMA: Solo Admin -->
+      <button *ngIf="canView('usuarios-sistema')" class="db-nav-item"
+              [class.db-nav-item--active]="activeView==='usuarios-sistema'"
+              (click)="setView('usuarios-sistema')">
+        <span class="db-nav-icon">
+          <svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="10" cy="6" r="3"/>
+            <path d="M5 18v-1a5 5 0 0110 0v1" stroke-linecap="round"/>
+            <circle cx="15.5" cy="4.5" r="2.5" fill="var(--db-amber)" stroke="none" opacity="0.85"/>
+          </svg>
+        </span>
+        <span class="db-nav-label" *ngIf="!sidebarCollapsed">USUARIOS SISTEMA</span>
+      </button>
+
+    </nav>
+
+    <div class="db-sidebar-footer">
+      <div class="db-sys-clock" *ngIf="!sidebarCollapsed">
+        <span class="db-clock-label">SYS_TIME</span>
+        <span class="db-clock-val">{{ currentTime }}</span>
+      </div>
+      <button class="db-nav-item db-nav-item--danger" (click)="logout()">
+        <span class="db-nav-icon">
+          <svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M13 10H3M7 6l-4 4 4 4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M10 3h7v14h-7" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="db-nav-label" *ngIf="!sidebarCollapsed">LOGOUT</span>
+      </button>
+    </div>
+
+    <button class="db-sidebar-toggle" (click)="toggleSidebar()">
+      <svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path *ngIf="!sidebarCollapsed" d="M8 2L4 6l4 4" stroke-linecap="round"/>
+        <path *ngIf="sidebarCollapsed"  d="M4 2l4 4-4 4" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </aside>
+
+  <!-- ═══════════════════════════════════════════
+       ÁREA PRINCIPAL
+  ═══════════════════════════════════════════ -->
+  <main class="db-main">
+
+    <!-- Topbar contextual -->
+    <header class="db-topbar">
+      <div class="db-topbar-left">
+        <div class="db-breadcrumb">
+          <span class="db-bc-root">KINELA·CMD</span>
+          <span class="db-bc-sep">/</span>
+          <span class="db-bc-current">{{ viewLabel }}</span>
+        </div>
+        <div class="db-live-badge">
+          <span class="db-live-pip"></span>LIVE · {{ pollingInterval }}s
+        </div>
+        <!-- Badge especial de streams activos cuando se está en monitoreo -->
+        <div class="db-monitor-badge" *ngIf="activeView==='monitoreo' && streamsActivos > 0">
+          <span class="db-monitor-pip"></span>
+          {{ streamsActivos }} STREAM{{ streamsActivos !== 1 ? 'S' : '' }} ACTIVO{{ streamsActivos !== 1 ? 'S' : '' }}
+        </div>
+      </div>
+      <div class="db-topbar-right">
+        <!-- Botones contextuales por vista -->
+        <button class="db-btn-primary" *ngIf="activeView==='empleados' && canCreate()" (click)="openModalEmpleado()">+ NUEVO EMPLEADO</button>
+        <button class="db-btn-primary" *ngIf="activeView==='areas' && canDelete()" (click)="openModalArea()">+ NUEVA ZONA</button>
+        <button class="db-btn-primary" *ngIf="activeView==='usuarios-sistema' && canDelete()" (click)="openModalUsuarioSistema()">+ NUEVO USUARIO</button>
+
+        <!-- Controles de layout de la matriz de video -->
+        <div class="db-monitor-layout-btns" *ngIf="activeView==='monitoreo'">
+          <button class="db-layout-btn" [class.db-layout-btn--active]="layoutMonitor==='grid-2'"
+                  (click)="setLayoutMonitor('grid-2')" title="2 columnas">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
+              <rect x="1" y="1" width="6" height="6"/><rect x="9" y="1" width="6" height="6"/>
+              <rect x="1" y="9" width="6" height="6"/><rect x="9" y="9" width="6" height="6"/>
+            </svg>
+          </button>
+          <button class="db-layout-btn" [class.db-layout-btn--active]="layoutMonitor==='grid-3'"
+                  (click)="setLayoutMonitor('grid-3')" title="3 columnas">
+            <svg viewBox="0 0 18 12" width="18" height="12" fill="currentColor">
+              <rect x="0" y="0" width="5" height="5"/><rect x="6.5" y="0" width="5" height="5"/><rect x="13" y="0" width="5" height="5"/>
+              <rect x="0" y="7" width="5" height="5"/><rect x="6.5" y="7" width="5" height="5"/><rect x="13" y="7" width="5" height="5"/>
+            </svg>
+          </button>
+          <button class="db-layout-btn" [class.db-layout-btn--active]="layoutMonitor==='fullscreen'"
+                  (click)="setLayoutMonitor('fullscreen')" title="Pantalla completa">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="1" y="1" width="14" height="14" rx="1"/>
+            </svg>
+          </button>
+          <button class="db-btn-export" (click)="refreshCamaras()">↺ ACTUALIZAR</button>
+        </div>
+
+        <!-- Exportar CSV / PDF en logs y reportes -->
+        <button class="db-btn-export"
+                *ngIf="canView('logs') && (activeView==='logs' || activeView==='reportes')"
+                (click)="exportCSV()">↓ CSV</button>
+        <button class="db-btn-export db-btn-export--pdf"
+                *ngIf="canView('logs') && (activeView==='logs' || activeView==='reportes')"
+                (click)="activeView==='reportes' ? exportPDF() : exportLogsAsPDF()">↓ PDF</button>
+
+        <div class="db-topbar-refresh" (click)="refreshData()" [class.db-refreshing]="isLoading" title="Actualizar datos">
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M14 8A6 6 0 1 1 8 2a6 6 0 0 1 4.5 2L14 2v4h-4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+    </header>
+
+    <!-- ══════════════════════════════════════════════════
+         VIEW: OVERVIEW
+    ══════════════════════════════════════════════════ -->
+    <div class="db-view" *ngIf="activeView==='overview'">
+
+      <div class="db-welcome-banner">
+        <div class="db-welcome-left">
+          <div class="db-welcome-avatar">
+            <span>{{ userInitials }}</span>
+            <div class="db-welcome-scan"></div>
+          </div>
+          <div class="db-welcome-info">
+            <span class="db-welcome-greeting">BIENVENIDO AL SISTEMA</span>
+            <h2 class="db-welcome-name">{{ currentUser?.nombre_completo || 'Operador' }}</h2>
+            <div class="db-welcome-meta">
+              <span class="db-role-badge db-role-badge--{{ rolSlug }}">{{ currentUser?.rol_nombre }}</span>
+              <span class="db-welcome-scope">{{ rolScope }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="db-welcome-right" *ngIf="stats">
+          <div class="db-welcome-stat">
+            <span class="db-ws-n">{{ stats.total_eventos }}</span>
+            <span class="db-ws-l">EVENTOS</span>
+          </div>
+          <div class="db-welcome-stat">
+            <span class="db-ws-n db-ws-n--green">{{ stats.tasa_exito }}<small>%</small></span>
+            <span class="db-ws-l">TASA ÉXITO</span>
+          </div>
+          <div class="db-welcome-stat">
+            <span class="db-ws-n db-ws-n--amber">{{ empleados.length }}</span>
+            <span class="db-ws-l">EMPLEADOS</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="db-kpi-row">
+        <div class="db-kpi db-kpi--cyan">
+          <div class="db-kpi-header"><span class="db-kpi-label">TOTAL EVENTOS</span></div>
+          <span class="db-kpi-val">{{ stats?.total_eventos ?? '—' }}</span>
+          <div class="db-kpi-bar"><div class="db-kpi-fill" style="--fill:100%"></div></div>
+          <span class="db-kpi-sub">ACUMULADO</span>
+        </div>
+        <div class="db-kpi db-kpi--green">
+          <div class="db-kpi-header"><span class="db-kpi-label">APROBADOS</span></div>
+          <span class="db-kpi-val">{{ stats?.exitosos ?? '—' }}</span>
+          <div class="db-kpi-bar"><div class="db-kpi-fill db-kpi-fill--green" [style.--fill]="(stats?.tasa_exito??0)+'%'"></div></div>
+          <span class="db-kpi-sub">TASA {{ stats?.tasa_exito ?? 0 }}%</span>
+        </div>
+        <div class="db-kpi db-kpi--red">
+          <div class="db-kpi-header"><span class="db-kpi-label">DENEGADOS</span></div>
+          <span class="db-kpi-val">{{ stats?.fallidos ?? '—' }}</span>
+          <div class="db-kpi-bar"><div class="db-kpi-fill db-kpi-fill--red" [style.--fill]="denegadosPct+'%'"></div></div>
+          <span class="db-kpi-sub">{{ denegadosPct }}% FALLO</span>
+        </div>
+        <div class="db-kpi db-kpi--amber">
+          <div class="db-kpi-header"><span class="db-kpi-label">EMPLEADOS</span></div>
+          <span class="db-kpi-val">{{ empleados.length }}</span>
+          <div class="db-kpi-bar"><div class="db-kpi-fill db-kpi-fill--amber" style="--fill:100%"></div></div>
+          <span class="db-kpi-sub">{{ empleadosConBio }} CON BIOMETRÍA</span>
+        </div>
+      </div>
+
+      <!-- Gráfico + Feed -->
+      <div class="db-overview-body">
+        <div class="db-panel db-panel--chart">
+          <div class="db-panel-header">
+            <span class="db-panel-title">DISTRIBUCIÓN POR ESTADO</span>
+            <span class="db-panel-badge">{{ registros.length }} EVENTOS</span>
+          </div>
+          <div class="db-chart-wrap">
+            <svg class="db-bar-chart" [attr.viewBox]="'0 0 '+chartWidth+' 180'" preserveAspectRatio="none">
+              <g *ngFor="let bar of chartBars">
+                <rect [attr.x]="bar.x" [attr.y]="180-bar.h" [attr.width]="bar.w" [attr.height]="bar.h" [attr.fill]="bar.color" opacity="0.75" rx="2"/>
+                <rect [attr.x]="bar.x" [attr.y]="180-bar.h" [attr.width]="bar.w" height="2" [attr.fill]="bar.color" rx="1"/>
+                <text [attr.x]="bar.x+bar.w/2" y="175" text-anchor="middle" font-size="8" fill="rgba(255,255,255,0.3)" font-family="'Courier New',monospace">{{ bar.label }}</text>
+              </g>
+              <line x1="0" y1="90"  [attr.x2]="chartWidth" y2="90"  stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+              <line x1="0" y1="45"  [attr.x2]="chartWidth" y2="45"  stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+              <line x1="0" y1="135" [attr.x2]="chartWidth" y2="135" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+              <text *ngIf="chartBars.length===0" x="300" y="95" text-anchor="middle" font-size="12" fill="rgba(255,255,255,0.1)" font-family="'Courier New',monospace">SIN DATOS</text>
+            </svg>
+          </div>
+          <div class="db-chart-legend">
+            <span class="db-legend-item db-legend-item--green">■ APROBADO</span>
+            <span class="db-legend-item db-legend-item--red">■ DENEGADO</span>
+            <span class="db-legend-item db-legend-item--amber">■ SIN PERMISO</span>
+          </div>
+        </div>
+        <div class="db-panel">
+          <div class="db-panel-header">
+            <span class="db-panel-title">ÚLTIMOS EVENTOS</span>
+            <button class="db-panel-action" *ngIf="canView('logs')" (click)="setView('logs')">VER TODO →</button>
+          </div>
+          <div class="db-feed-mini">
+            <div class="db-feed-item" *ngFor="let r of registros.slice(0,8)"
+                 [class.db-feed-item--ok]="r.permitido" [class.db-feed-item--deny]="!r.permitido">
+              <div class="db-feed-indicator"></div>
+              <div class="db-feed-body">
+                <span class="db-feed-user">{{ r.usuario_nombre||'DESCONOCIDO' }}</span>
+                <span class="db-feed-area">{{ r.area_nombre }}</span>
+              </div>
+              <div class="db-feed-meta">
+                <span class="db-feed-estado" [class.db-feed-estado--ok]="r.permitido" [class.db-feed-estado--deny]="!r.permitido">{{ r.estado }}</span>
+                <span class="db-feed-time">{{ r.fecha_formateada }}</span>
+              </div>
+            </div>
+            <div class="db-feed-empty" *ngIf="registros.length===0&&!isLoading">SIN EVENTOS</div>
+            <div class="db-loading-row" *ngIf="isLoading"><div class="db-loading-bar"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mapa de calor por área -->
+      <div class="db-panel">
+        <div class="db-panel-header">
+          <span class="db-panel-title">ACTIVIDAD POR ÁREA</span>
+          <span class="db-panel-badge">{{ areaActivity.length }} ZONAS</span>
+        </div>
+        <div class="db-areas-grid">
+          <div class="db-area-cell" *ngFor="let a of areaActivity"
+               [class.db-area-cell--high]="a.pct>70"
+               [class.db-area-cell--mid]="a.pct>=30&&a.pct<=70"
+               [class.db-area-cell--low]="a.pct<30">
+            <div class="db-area-heat" [style.opacity]="a.pct/100+0.12"></div>
+            <span class="db-area-name">{{ a.nombre }}</span>
+            <span class="db-area-count">{{ a.count }}</span>
+          </div>
+          <div class="db-feed-empty" *ngIf="areaActivity.length===0">SIN ÁREAS</div>
+        </div>
+      </div>
+    </div><!-- /overview -->
+
+    <!-- ══════════════════════════════════════════════════
+         VIEW: MONITOREO — Matriz de Video VMS
+         Solo Administrador.
+         
+         Arquitectura:
+         - GET /api/cameras/ → lista de cámaras registradas (Camara model)
+         - GET /api/cameras/stream/{idx}/ → M-JPEG stream (VideoStreamView)
+         - El browser consume el stream nativamente con <img src="...">
+         - La carga es lazy: el stream solo arranca cuando se navega a esta vista
+    ══════════════════════════════════════════════════ -->
+    <div class="db-view db-view--monitor" *ngIf="activeView==='monitoreo'">
+    
+      <div class="db-monitor-empty" *ngIf="camaras.length===0 && !isLoadingCamaras">
+        <div class="db-monitor-empty-icon">
+          <svg viewBox="0 0 64 64" width="52" height="52" fill="none" stroke="rgba(0,240,255,0.18)" stroke-width="1.5">
+            <rect x="2" y="10" width="44" height="32" rx="3"/>
+            <path d="M46 22l16-8v28l-16-8V22z"/>
+            <line x1="14" y1="50" x2="34" y2="50"/>
+            <line x1="24" y1="42" x2="24" y2="50"/>
+            <circle cx="22" cy="26" r="8" stroke-dasharray="4 3"/>
+          </svg>
+        </div>
+        <p class="db-monitor-empty-title">SIN CÁMARAS REGISTRADAS</p>
+        <p class="db-monitor-empty-sub">
+          Registra los dispositivos de video en el sistema camera_hub<br/>
+          y aparecerán automáticamente en esta vista.
+        </p>
+        <button class="db-btn-primary" (click)="refreshCamaras()">↺ ESCANEAR DISPOSITIVOS</button>
+      </div>
+    
+      <div class="db-monitor-loading" *ngIf="isLoadingCamaras">
+        <div class="db-loading-ring"></div>
+        <span class="db-loading-label">CONECTANDO CON CAMERA HUB...</span>
+      </div>
+    
+      <div class="db-monitor-grid" *ngIf="camaras.length>0 && !isLoadingCamaras"
+           [class.db-monitor-grid--2]="layoutMonitor==='grid-2'"
+           [class.db-monitor-grid--3]="layoutMonitor==='grid-3'"
+           [class.db-monitor-grid--full]="layoutMonitor==='fullscreen'">
+      
+        <div class="db-cam-cell"
+             *ngFor="let cam of camaras; trackBy: trackByCamId"
+             [class.db-cam-cell--active]="cam.activa"
+             [class.db-cam-cell--focus]="camFocusIndex === cam.id"
+             (dblclick)="toggleFocusCam(cam.id)">
+      
+          <div class="db-cam-header">
+            <div class="db-cam-header-left">
+              <span class="db-cam-pip" [class.db-cam-pip--on]="cam.activa" [class.db-cam-pip--off]="!cam.activa"></span>
+              <span class="db-cam-label">{{ cam.nombre || 'CAM_' + cam.id }}</span>
+            </div>
+            <div class="db-cam-header-right">
+              <span class="db-cam-area-tag" *ngIf="cam.nombre_area">
+                {{ cam.nombre_area }}
+              </span>
+              <span class="db-cam-idx">IDX:{{ cam.hardware_index }}</span>
+            </div>
+          </div>
+        
+          <div class="db-cam-feed-wrap">
+            <img *ngIf="cam.activa"
+                 [src]="getStreamUrl(cam)"
+                 class="db-cam-feed"
+                 [alt]="cam.nombre"
+                 (error)="onStreamError(cam)"
+                 (load)="onStreamLoad(cam)"/>
+          
+            <div class="db-cam-ai-overlay" *ngIf="cam.activa && cam.procesandoIA">
+              <div class="db-cam-reticle">
+                <div class="db-cr-corner db-cr-corner--tl"></div>
+                <div class="db-cr-corner db-cr-corner--tr"></div>
+                <div class="db-cr-corner db-cr-corner--bl"></div>
+                <div class="db-cr-corner db-cr-corner--br"></div>
+                <div class="db-cr-scan"></div>
+              </div>
+              <span class="db-cam-ai-label">IA PROCESANDO</span>
+            </div>
+          
+            <div class="db-cam-offline" *ngIf="!cam.activa || cam.error">
+              <svg viewBox="0 0 40 40" width="32" height="32" fill="none" stroke="rgba(255,51,102,0.35)" stroke-width="1.5">
+                <circle cx="20" cy="20" r="17"/>
+                <line x1="8" y1="8" x2="32" y2="32" stroke="rgba(255,51,102,0.5)"/>
+              </svg>
+              <span>{{ cam.error ? 'SIN SEÑAL' : 'INACTIVA' }}</span>
+            </div>
+          
+            <div class="db-cam-timestamp" *ngIf="cam.activa && !cam.error">
+              {{ currentTime }}
+            </div>
+          
+            <div class="db-cam-last-event" *ngIf="getUltimoEventoArea(cam) as evento">
+              <span class="db-cam-le-pip" [class.db-cam-le-pip--ok]="evento.permitido" [class.db-cam-le-pip--deny]="!evento.permitido"></span>
+              <span class="db-cam-le-text">{{ evento.usuario_nombre || 'DESCONOCIDO' }}</span>
+              <span class="db-cam-le-estado" [class.db-cam-le-estado--ok]="evento.permitido" [class.db-cam-le-estado--deny]="!evento.permitido">
+                {{ evento.estado }}
+              </span>
+            </div>
+          </div>
+        
+          <div class="db-cam-footer">
+            <span class="db-cam-url">{{ cam.stream_url }}</span>
+            <div class="db-cam-actions">
+              <button class="db-cam-btn"
+                      [class.db-cam-btn--on]="cam.activa"
+                      [class.db-cam-btn--off]="!cam.activa"
+                      (click)="toggleCamara(cam)"
+                      [title]="cam.activa ? 'Desactivar stream' : 'Activar stream'">
+                {{ cam.activa ? '■ OFF' : '▶ ON' }}
+              </button>
+
+              <button class="db-cam-btn db-cam-btn--capture"
+                      *ngIf="cam.activa"
+                      (click)="capturarFrameManual(cam)"
+                      title="Capturar frame (Snapshot)">
+                ⊙
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    
+    </div><!-- /monitoreo -->
+
+    <!-- ══════════════════════════════════════════════════
+         VIEW: EMPLEADOS
+    ══════════════════════════════════════════════════ -->
+    <div class="db-view" *ngIf="activeView==='empleados'">
+      <div class="db-panel db-panel--full">
+        <div class="db-panel-header">
+          <span class="db-panel-title">IDENTIDADES BIOMÉTRICAS</span>
+          <span class="db-panel-badge">{{ empleados.length }} EMPLEADOS</span>
+        </div>
+        <div class="db-search-row">
+          <div class="db-search-wrap">
+            <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="rgba(0,240,255,0.4)" stroke-width="1.5"><circle cx="7" cy="7" r="4"/><path d="M11 11l3 3" stroke-linecap="round"/></svg>
+            <input class="db-search" [(ngModel)]="searchEmpleado" (input)="applyEmpleadoFilter()" placeholder="BUSCAR POR NOMBRE O CÉDULA..."/>
+          </div>
+          <div class="db-filter-pills">
+            <button class="db-pill" [class.db-pill--active]="filtroBio===null" (click)="setBioFilter(null)">TODOS</button>
+            <button class="db-pill db-pill--green" [class.db-pill--active]="filtroBio===true" (click)="setBioFilter(true)">ENROLLADOS</button>
+            <button class="db-pill db-pill--amber" [class.db-pill--active]="filtroBio===false" (click)="setBioFilter(false)">PENDIENTES</button>
+          </div>
+        </div>
+        <div class="db-users-grid">
+          <div class="db-user-card" *ngFor="let emp of empleadosFiltrados">
+            <div class="db-user-card-header">
+              <div class="db-user-card-avatar"><span>{{ getInitials(emp.nombre_completo) }}</span><div class="db-user-card-scan"></div></div>
+              <div class="db-user-card-meta">
+                <span class="db-user-card-name">{{ emp.nombre_completo }}</span>
+                <span class="db-user-card-id">CC {{ emp.identificacion }}</span>
+              </div>
+              <span class="db-user-card-role">{{ emp.rol?.nombre||'—' }}</span>
+            </div>
+            <div class="db-user-card-body">
+              <div class="db-user-card-stat">
+                <span class="db-ucs-label">BIOMETRÍA</span>
+                <span class="db-ucs-val" [class.db-ucs-val--ok]="emp.face_embedding" [class.db-ucs-val--warn]="!emp.face_embedding">
+                  {{ emp.face_embedding ? '✓ ENROLLADO' : '⚠ PENDIENTE' }}
+                </span>
+              </div>
+              <div class="db-user-card-stat">
+                <span class="db-ucs-label">EMAIL</span>
+                <span class="db-ucs-val">{{ emp.email||'—' }}</span>
+              </div>
+            </div>
+            <div class="db-user-card-actions">
+              <button class="db-card-btn" (click)="editarEmpleado(emp)">
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 2l3 3-9 9H2v-3L11 2z" stroke-linejoin="round"/></svg>EDITAR
+              </button>
+              <button class="db-card-btn db-card-btn--danger" *ngIf="canDelete()" (click)="confirmarEliminar(emp)">
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M6 4V2h4v2M5 4l1 9h4l1-9" stroke-linecap="round" stroke-linejoin="round"/></svg>ELIMINAR
+              </button>
+            </div>
+          </div>
+          <div class="db-panel-empty" *ngIf="empleadosFiltrados.length===0&&!isLoading">SIN EMPLEADOS</div>
+        </div>
+      </div>
+    </div><!-- /empleados -->
+
+    <!-- ══════════════════════════════════════════════════
+         VIEW: LOGS
+    ══════════════════════════════════════════════════ -->
+    <div class="db-view" *ngIf="activeView==='logs'">
+      <div class="db-panel db-panel--full">
+        <div class="db-panel-header">
+          <span class="db-panel-title">REGISTRO DE ACCESOS BIOMÉTRICOS</span>
+          <span class="db-panel-badge">{{ registrosFiltrados.length }} / {{ registros.length }}</span>
+        </div>
+        <div class="db-search-row db-search-row--wrap">
+          <div class="db-search-wrap">
+            <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="rgba(0,240,255,0.4)" stroke-width="1.5"><circle cx="7" cy="7" r="4"/><path d="M11 11l3 3" stroke-linecap="round"/></svg>
+            <input class="db-search" [(ngModel)]="searchQuery" (input)="applyFilter()" placeholder="USUARIO / ÁREA / ESTADO / ROL..."/>
+          </div>
+          <div class="db-date-filters">
+            <span class="db-date-label">DESDE</span>
+            <input type="date" class="db-date-input" [(ngModel)]="fechaDesde" (change)="applyFilter()"/>
+            <span class="db-date-sep">→</span>
+            <input type="date" class="db-date-input" [(ngModel)]="fechaHasta" (change)="applyFilter()"/>
+          </div>
+          <div class="db-filter-pills">
+            <button class="db-pill" [class.db-pill--active]="filtroPermitido===null" (click)="setPermitidoFilter(null)">TODOS</button>
+            <button class="db-pill db-pill--green" [class.db-pill--active]="filtroPermitido===true" (click)="setPermitidoFilter(true)">APROBADOS</button>
+            <button class="db-pill db-pill--red" [class.db-pill--active]="filtroPermitido===false" (click)="setPermitidoFilter(false)">DENEGADOS</button>
+          </div>
+        </div>
+        <div class="db-table-wrap">
+          <table class="db-table">
+            <thead>
+              <tr>
+                <th class="db-th db-th--sortable" (click)="sortBy('registro_id')">#ID{{ sortIndicator('registro_id') }}</th>
+                <th class="db-th db-th--sortable" (click)="sortBy('usuario_nombre')">EMPLEADO{{ sortIndicator('usuario_nombre') }}</th>
+                <th class="db-th">ROL</th>
+                <th class="db-th db-th--sortable" (click)="sortBy('area_nombre')">ÁREA{{ sortIndicator('area_nombre') }}</th>
+                <th class="db-th db-th--sortable" (click)="sortBy('fecha_formateada')">TIMESTAMP{{ sortIndicator('fecha_formateada') }}</th>
+                <th class="db-th">ESTADO</th>
+                <th class="db-th">MOTIVO</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="db-tr" *ngFor="let r of registrosFiltrados"
+                  [class.db-tr--ok]="r.permitido" [class.db-tr--deny]="!r.permitido">
+                <td class="db-td db-td--id">{{ r.registro_id }}</td>
+                <td class="db-td db-td--user"><div class="db-td-user"><span class="db-td-avatar">{{ getInitials(r.usuario_nombre) }}</span>{{ r.usuario_nombre||'DESCONOCIDO' }}</div></td>
+                <td class="db-td"><span class="db-td-role">{{ r.rol_nombre||'—' }}</span></td>
+                <td class="db-td db-td--area">{{ r.area_nombre }}</td>
+                <td class="db-td db-td--time">{{ r.fecha_formateada }}</td>
+                <td class="db-td">
+                  <span class="db-status-badge" [class.db-status-badge--ok]="r.permitido" [class.db-status-badge--deny]="!r.permitido">
+                    <span class="db-status-pip"></span>{{ r.estado }}
+                  </span>
+                </td>
+                <td class="db-td db-td--motive">{{ r.motivo_denegacion||'—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="db-table-empty" *ngIf="registrosFiltrados.length===0&&!isLoading">SIN RESULTADOS</div>
+        </div>
+      </div>
+    </div><!-- /logs -->
+
+    <!-- ══════════════════════════════════════════════════
+         VIEW: REPORTES
+    ══════════════════════════════════════════════════ -->
+    <div class="db-view" *ngIf="activeView==='reportes'">
+      <div class="db-panel">
+        <div class="db-panel-header"><span class="db-panel-title">CONFIGURAR REPORTE</span></div>
+        <div class="db-report-config">
+          <div class="db-report-field"><label class="db-field-label">TIPO</label>
+            <select class="db-field-select" [(ngModel)]="reporteTipo">
+              <option value="general">GENERAL DE ACCESOS</option>
+              <option value="empleado">POR EMPLEADO</option>
+              <option value="area">POR ÁREA</option>
+              <option value="denegados">SOLO DENEGADOS</option>
+            </select>
+          </div>
+          <div class="db-report-field"><label class="db-field-label">DESDE</label><input type="date" class="db-field-input" [(ngModel)]="reporteDesde"/></div>
+          <div class="db-report-field"><label class="db-field-label">HASTA</label><input type="date" class="db-field-input" [(ngModel)]="reporteHasta"/></div>
+          <div class="db-report-field" *ngIf="reporteTipo==='empleado'"><label class="db-field-label">EMPLEADO</label>
+            <select class="db-field-select" [(ngModel)]="reporteEmpleadoId">
+              <option value="">SELECCIONAR...</option>
+              <option *ngFor="let e of empleados" [value]="e.usuario_id">{{ e.nombre_completo }}</option>
+            </select>
+          </div>
+          <div class="db-report-field" *ngIf="reporteTipo==='area'"><label class="db-field-label">ÁREA</label>
+            <select class="db-field-select" [(ngModel)]="reporteAreaId">
+              <option value="">SELECCIONAR...</option>
+              <option *ngFor="let a of areas" [value]="a.area_id">{{ a.nombre }}</option>
+            </select>
+          </div>
+          <div class="db-report-actions">
+            <button class="db-btn-primary" (click)="generarReporte()">GENERAR</button>
+            <button class="db-btn-export" (click)="exportCSV()">↓ CSV</button>
+            <button class="db-btn-export db-btn-export--pdf" (click)="exportPDF()" [disabled]="reporteData.length===0">↓ PDF</button>
+          </div>
+        </div>
+      </div>
+      <div class="db-panel" *ngIf="reporteData.length>0">
+        <div class="db-panel-header">
+          <span class="db-panel-title">PREVISUALIZACIÓN · {{ reporteData.length }} REGISTROS</span>
+          <span class="db-panel-badge">{{ reporteDesde||'—' }} → {{ reporteHasta||'HOY' }}</span>
+        </div>
+        <div class="db-report-kpis">
+          <div class="db-report-kpi"><span class="db-rk-n">{{ reporteStats.total }}</span><span class="db-rk-l">TOTAL</span></div>
+          <div class="db-report-kpi db-report-kpi--green"><span class="db-rk-n">{{ reporteStats.aprobados }}</span><span class="db-rk-l">APROBADOS</span></div>
+          <div class="db-report-kpi db-report-kpi--red"><span class="db-rk-n">{{ reporteStats.denegados }}</span><span class="db-rk-l">DENEGADOS</span></div>
+          <div class="db-report-kpi db-report-kpi--amber"><span class="db-rk-n">{{ reporteStats.tasa }}<small>%</small></span><span class="db-rk-l">TASA ÉXITO</span></div>
+        </div>
+        <div class="db-table-wrap">
+          <table class="db-table">
+            <thead><tr><th class="db-th">EMPLEADO</th><th class="db-th">ROL</th><th class="db-th">ÁREA</th><th class="db-th">TIMESTAMP</th><th class="db-th">ESTADO</th><th class="db-th">MOTIVO</th></tr></thead>
+            <tbody>
+              <tr class="db-tr" *ngFor="let r of reporteData.slice(0,50)" [class.db-tr--ok]="r.permitido" [class.db-tr--deny]="!r.permitido">
+                <td class="db-td">{{ r.usuario_nombre||'DESCONOCIDO' }}</td>
+                <td class="db-td"><span class="db-td-role">{{ r.rol_nombre||'—' }}</span></td>
+                <td class="db-td db-td--area">{{ r.area_nombre }}</td>
+                <td class="db-td db-td--time">{{ r.fecha_formateada }}</td>
+                <td class="db-td"><span class="db-status-badge" [class.db-status-badge--ok]="r.permitido" [class.db-status-badge--deny]="!r.permitido"><span class="db-status-pip"></span>{{ r.estado }}</span></td>
+                <td class="db-td db-td--motive">{{ r.motivo_denegacion||'—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="db-table-note" *ngIf="reporteData.length>50">Mostrando 50 de {{ reporteData.length }} · Exporta el PDF para el reporte completo</div>
+        </div>
+      </div>
+    </div><!-- /reportes -->
+
+    <!-- ══════════════════════════════════════════════════
+         VIEW: ZONAS DE CONTROL — CRUD + Matriz de Permisos
+         Solo Administrador
+         
+         Modelo: Area { area_id, nombre, ubicacion, camara_ip }
+         Modelo: PermisoArea { permiso_id, rol(FK), area(FK), puede_acceder, fecha_modificacion }
+    ══════════════════════════════════════════════════ -->
+    <div class="db-view" *ngIf="activeView==='areas'">
+
+      <div class="db-panel db-panel--full">
+        <div class="db-panel-header">
+          <span class="db-panel-title">ZONAS DE CONTROL DE ACCESO</span>
+          <span class="db-panel-badge">{{ areas.length }} ZONAS</span>
+        </div>
+        <div class="db-areas-list">
+          <div class="db-area-row" *ngFor="let a of areaActivity">
+            <div class="db-area-row-left">
+              <div class="db-area-row-icon">
+                <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M10 2L2 7v11h16V7L10 2z"/><rect x="7" y="12" width="6" height="6"/>
+                </svg>
+              </div>
+              <div>
+                <span class="db-area-row-name">{{ a.nombre }}</span>
+                <span class="db-area-row-id">
+                  {{ a.ubicacion || 'Sin ubicación' }}
+                  <span class="db-area-cam-tag" *ngIf="a.camara_ip">· {{ a.camara_ip }}</span>
+                </span>
+              </div>
+            </div>
+            <div class="db-area-row-stats">
+              <div class="db-area-bar-wrap">
+                <div class="db-area-bar"><div class="db-area-bar-fill" [style.width.%]="a.pct"></div></div>
+                <span class="db-area-pct">{{ a.pct }}%</span>
+              </div>
+              <span class="db-area-events">{{ a.count }} EVENTOS</span>
+            </div>
+            <div class="db-area-row-heat"
+                 [class.db-heat--high]="a.pct>70"
+                 [class.db-heat--mid]="a.pct>=30&&a.pct<=70"
+                 [class.db-heat--low]="a.pct<30">
+              {{ a.pct>70?'ALTA':a.pct>=30?'MEDIA':'BAJA' }}
+            </div>
+            <div class="db-area-row-actions">
+              <button class="db-card-btn db-card-btn--permisos" (click)="abrirPermisosArea(a)">
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="5" y="1" width="6" height="5" rx="1"/>
+                  <path d="M3 6h10v9H3z" stroke-linejoin="round"/>
+                  <circle cx="8" cy="10" r="1.5"/>
+                </svg>
+                PERMISOS
+              </button>
+              <button class="db-card-btn" (click)="editarArea(a)">
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 2l3 3-9 9H2v-3L11 2z" stroke-linejoin="round"/></svg>EDITAR
+              </button>
+              <button class="db-card-btn db-card-btn--danger" (click)="confirmarEliminarArea(a)">
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M6 4V2h4v2M5 4l1 9h4l1-9" stroke-linecap="round" stroke-linejoin="round"/></svg>ELIMINAR
+              </button>
+            </div>
+          </div>
+          <div class="db-panel-empty" *ngIf="areaActivity.length===0&&!isLoading">SIN ZONAS CONFIGURADAS</div>
+        </div>
+      </div>
+
+      <!-- ── Matriz de permisos de la zona seleccionada ──
+           Muestra un toggle por cada Rol disponible.
+           Usa el modelo PermisoArea con unique_together (rol, area).
+      ── -->
+      <div class="db-panel" *ngIf="areaPermisoSeleccionada">
+        <div class="db-panel-header">
+          <span class="db-panel-title">PERMISOS · {{ areaPermisoSeleccionada.nombre }}</span>
+          <div class="db-panel-header-right">
+            <span class="db-panel-badge">{{ permisosArea.length }} ROLES</span>
+            <button class="db-panel-action" style="margin-left:12px" (click)="areaPermisoSeleccionada=null">CERRAR ✕</button>
+          </div>
+        </div>
+        <!-- Estado de guardado de permisos -->
+        <div class="db-permiso-save-msg db-permiso-save-msg--ok" *ngIf="permisoSaveMsg">
+          ✓ {{ permisoSaveMsg }}
+        </div>
+        <div class="db-permisos-grid">
+          <div class="db-permiso-row" *ngFor="let pr of permisosArea">
+            <div class="db-permiso-rol-info">
+              <span class="db-permiso-rol-name">{{ pr.rol_nombre }}</span>
+              <span class="db-permiso-rol-desc">{{ getRolDesc(pr.rol_nombre) }}</span>
+            </div>
+            <!-- Toggle que hace PATCH o POST según si ya existe el permiso -->
+            <div class="db-permiso-toggle"
+                 [class.db-permiso-toggle--on]="pr.puede_acceder"
+                 [class.db-permiso-toggle--saving]="pr.guardando"
+                 (click)="!pr.guardando && togglePermiso(pr)"
+                 [title]="pr.guardando ? 'Guardando...' : (pr.puede_acceder ? 'Revocar acceso' : 'Conceder acceso')">
+              <div class="db-permiso-slider"></div>
+            </div>
+            <div class="db-permiso-right">
+              <span class="db-permiso-status"
+                    [class.db-permiso-status--on]="pr.puede_acceder"
+                    [class.db-permiso-status--off]="!pr.puede_acceder">
+                {{ pr.puede_acceder ? 'ACCESO PERMITIDO' : 'ACCESO DENEGADO' }}
+              </span>
+              <!-- Última modificación del permiso -->
+              <span class="db-permiso-fecha" *ngIf="pr.fecha_modificacion">
+                MOD: {{ pr.fecha_modificacion | date:'dd/MM HH:mm' }}
+              </span>
+            </div>
+          </div>
+          <div class="db-panel-empty" *ngIf="permisosArea.length===0">CARGANDO PERMISOS...</div>
+        </div>
+        <div class="db-permisos-footer">
+          <span class="db-permisos-info">⓲ Los cambios son inmediatos. El motor biométrico consulta PermisoArea en cada intento de acceso.</span>
+        </div>
+      </div>
+
+    </div><!-- /areas -->
+
+    <!-- ══════════════════════════════════════════════════
+         VIEW: USUARIOS DE SISTEMA (InterfazUsuario)
+         Solo Administrador
+    ══════════════════════════════════════════════════ -->
+    <div class="db-view" *ngIf="activeView==='usuarios-sistema'">
+      <div class="db-panel db-panel--full">
+        <div class="db-panel-header">
+          <span class="db-panel-title">CUENTAS DE ACCESO AL PANEL</span>
+          <span class="db-panel-badge">{{ usuariosSistema.length }} CUENTAS</span>
+        </div>
+        <div class="db-search-row">
+          <div class="db-search-wrap">
+            <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="rgba(0,240,255,0.4)" stroke-width="1.5"><circle cx="7" cy="7" r="4"/><path d="M11 11l3 3" stroke-linecap="round"/></svg>
+            <input class="db-search" [(ngModel)]="searchUsuarioSistema" (input)="applyUsuarioSistemaFilter()" placeholder="BUSCAR POR USERNAME O NOMBRE..."/>
+          </div>
+        </div>
+        <div class="db-sys-users-grid">
+          <div class="db-sys-user-card" *ngFor="let u of usuariosSistemaFiltrados">
+            <div class="db-sys-user-top">
+              <div class="db-sys-user-avatar">
+                <span>{{ getInitials(u.perfil_nombre||u.username) }}</span>
+                <div class="db-sys-user-status" [class.db-sys-user-status--active]="u.is_active"></div>
+              </div>
+              <div class="db-sys-user-info">
+                <span class="db-sys-user-name">{{ u.perfil_nombre||'Sin perfil' }}</span>
+                <span class="db-sys-user-login">&#64;{{ u.username }}</span>
+              </div>
+              <span class="db-sys-user-rol">{{ u.rol_nombre||'—' }}</span>
+            </div>
+            <div class="db-sys-user-meta">
+              <div class="db-sys-meta-item">
+                <span class="db-sys-meta-label">ESTADO</span>
+                <span class="db-sys-meta-val" [class.db-ucs-val--ok]="u.is_active" [class.db-ucs-val--warn]="!u.is_active">{{ u.is_active?'ACTIVO':'INACTIVO' }}</span>
+              </div>
+              <div class="db-sys-meta-item">
+                <span class="db-sys-meta-label">2FA</span>
+                <span class="db-sys-meta-val" [class.db-ucs-val--ok]="u.tiene_2fa">{{ u.tiene_2fa?'✓ BIOMÉTRICO':'CONTRASEÑA' }}</span>
+              </div>
+            </div>
+            <div class="db-user-card-actions">
+              <button class="db-card-btn" (click)="editarUsuarioSistema(u)">EDITAR</button>
+              <button class="db-card-btn" [class.db-card-btn--warn]="u.is_active" (click)="toggleActivoUsuarioSistema(u)">
+                {{ u.is_active?'DESACTIVAR':'ACTIVAR' }}
+              </button>
+              <button class="db-card-btn db-card-btn--danger" (click)="confirmarEliminarUsuarioSistema(u)">ELIMINAR</button>
+            </div>
+          </div>
+          <div class="db-panel-empty" *ngIf="usuariosSistemaFiltrados.length===0&&!isLoading">SIN CUENTAS</div>
+        </div>
+      </div>
+    </div><!-- /usuarios-sistema -->
+
+    <!-- Loading overlay global -->
+    <div class="db-loading-overlay" *ngIf="isLoading&&registros.length===0&&empleados.length===0">
+      <div class="db-loading-core">
+        <div class="db-loading-ring"></div>
+        <span class="db-loading-label">SINCRONIZANDO...</span>
+      </div>
+    </div>
+
+  </main>
+</div><!-- /db-shell -->
+
+
+<!-- ══════════════════════════════════════════════════════════
+     MODAL: CREAR/EDITAR EMPLEADO
+     
+     CAMBIO v3: La captura facial usa el stream de camera_hub.
+     Se selecciona la cámara activa y se captura un frame via
+     fetch() del endpoint de snapshot, o se renderiza el stream
+     en un <img> y se dibuja en canvas.
+     
+     Modelo Usuario: nombre_completo, identificacion, email, rol
+     (NO tiene campo 'cargo' — se eliminó)
+══════════════════════════════════════════════════════════ -->
+<div class="db-modal-overlay" *ngIf="modalEmpleadoOpen" (click)="cerrarModalEmpleado()">
+  <div class="db-modal" (click)="$event.stopPropagation()">
+    <div class="db-modal-header">
+      <div class="db-modal-title-wrap">
+        <span class="db-modal-eyebrow">{{ empleadoEditando?'ACTUALIZAR':'NUEVO' }} · REGISTRO BIOMÉTRICO</span>
+        <h3 class="db-modal-title">{{ empleadoEditando?empleadoEditando.nombre_completo:'Nuevo Empleado' }}</h3>
+      </div>
+      <button class="db-modal-close" (click)="cerrarModalEmpleado()">✕</button>
+    </div>
+    <div class="db-modal-body">
+
+      <div class="db-modal-col">
+        <p class="db-modal-section-label">DATOS PERSONALES</p>
+        <div class="db-field-group">
+          <label class="db-field-label">NOMBRE COMPLETO *</label>
+          <input class="db-field-input" [(ngModel)]="formEmpleado.nombre_completo" placeholder="Nombre completo del empleado"/>
+        </div>
+        <div class="db-field-group">
+          <label class="db-field-label">NÚMERO DE IDENTIFICACIÓN *</label>
+          <input class="db-field-input" [(ngModel)]="formEmpleado.identificacion" placeholder="Cédula o ID"/>
+        </div>
+        <div class="db-field-group">
+          <label class="db-field-label">CORREO ELECTRÓNICO</label>
+          <input class="db-field-input" type="email" [(ngModel)]="formEmpleado.email" placeholder="empleado@empresa.com"/>
+        </div>
+        <div class="db-field-group">
+          <label class="db-field-label">ROL DEL SISTEMA *</label>
+          <select class="db-field-select" [(ngModel)]="formEmpleado.rol">
+            <option value="">SELECCIONAR ROL...</option>
+            <option *ngFor="let r of roles" [value]="r.rol_id">{{ r.nombre }}</option>
+          </select>
+        </div>
+        <div class="db-form-msg db-form-msg--error" *ngIf="formError">⚠ {{ formError }}</div>
+        <div class="db-form-msg db-form-msg--ok" *ngIf="formSuccess">✓ {{ formSuccess }}</div>
+        <button class="db-btn-primary db-btn--full" (click)="guardarEmpleado()"
+                [disabled]="isSaving||(!fotoCapturada&&!empleadoEditando)">
+          {{ isSaving?'PROCESANDO BIOMETRÍA...':empleadoEditando?'ACTUALIZAR EMPLEADO':'REGISTRAR EMPLEADO' }}
+        </button>
+      </div>
+
+      <div class="db-modal-col">
+        <p class="db-modal-section-label">CAPTURA BIOMÉTRICA · VIA CAMERA HUB</p>
+
+        <div class="db-field-group" *ngIf="camaras.length > 0">
+          <label class="db-field-label">SELECCIONAR CÁMARA</label>
+          <select class="db-field-select" [(ngModel)]="camaraCaptura" (change)="onCamaraCapturaChange()">
+            <option value="">— Sin stream (usar cámara local) —</option>
+            <option *ngFor="let c of camaras" [value]="c.id">
+              {{ c.nombre || 'CAM_'+c.id }} — IDX:{{ c.hardware_index }}
+            </option>
+          </select>
+        </div>
+
+        <div class="db-webcam-wrap">
+          <img #streamPreview
+               *ngIf="camaraCaptura && !fotoCapturada"
+               [src]="getStreamUrlById(camaraCaptura)"
+               class="db-webcam-video"
+               (error)="streamCapturaError=true"
+               alt="Stream de cámara"/>
+
+          <video #videoElement class="db-webcam-video" autoplay playsinline
+                 [style.display]="(!camaraCaptura && webcamActiva && !fotoCapturada) ? 'block' : 'none'">
+          </video>
+
+          <canvas #canvasElement class="db-webcam-canvas"
+                  [style.display]="fotoCapturada ? 'block' : 'none'">
+          </canvas>
+
+          <div class="db-webcam-placeholder" *ngIf="!camaraCaptura && !webcamActiva && !fotoCapturada">
+            <svg viewBox="0 0 60 60" width="44" height="44" fill="none" stroke="rgba(0,240,255,0.22)" stroke-width="1.5">
+              <circle cx="30" cy="26" r="9"/>
+              <path d="M8 48c0-11 10-18 22-18s22 7 22 18"/>
+            </svg>
+            <span>SIN CÁMARA ACTIVA</span>
+          </div>
+
+          <div class="db-webcam-overlay" *ngIf="camaraCaptura && !fotoCapturada">
+            <div class="db-webcam-reticle db-webcam-reticle--stream">
+              <div class="db-reticle-corner db-reticle-corner--tl"></div>
+              <div class="db-reticle-corner db-reticle-corner--tr"></div>
+              <div class="db-reticle-corner db-reticle-corner--bl"></div>
+              <div class="db-reticle-corner db-reticle-corner--br"></div>
+              <div class="db-reticle-scan"></div>
+            </div>
+            <span class="db-webcam-status">
+              STREAM ACTIVO · {{ getStreamUrlById(camaraCaptura) }}
+            </span>
+          </div>
+
+          <div class="db-webcam-confirmed" *ngIf="fotoCapturada">
+            <span>CAPTURA CONFIRMADA</span>
+          </div>
+
+          <div class="db-webcam-error" *ngIf="streamCapturaError">
+            ⚠ SIN SEÑAL DEL STREAM<br/>
+            <button class="db-cam-btn" style="margin-top:8px" (click)="streamCapturaError=false; onCamaraCapturaChange()">REINTENTAR</button>
+          </div>
+        </div>
+
+        <div class="db-webcam-controls">
+          <ng-container *ngIf="camaraCaptura">
+            <button class="db-btn-cam db-btn-cam--capture" *ngIf="!fotoCapturada" (click)="capturarDesdeStream()">⊙ CAPTURAR FRAME</button>
+            <button class="db-btn-cam" *ngIf="fotoCapturada" (click)="repetirCaptura()">↺ REPETIR</button>
+          </ng-container>
+
+          <ng-container *ngIf="!camaraCaptura">
+            <button class="db-btn-cam" *ngIf="!webcamActiva&&!fotoCapturada" (click)="iniciarWebcam()">▶ CÁMARA LOCAL</button>
+            <button class="db-btn-cam db-btn-cam--capture" *ngIf="webcamActiva&&!fotoCapturada" (click)="capturarFoto()">⊙ CAPTURAR</button>
+            <button class="db-btn-cam" *ngIf="fotoCapturada" (click)="repetirCaptura()">↺ REPETIR</button>
+            <button class="db-btn-cam db-btn-cam--stop" *ngIf="webcamActiva" (click)="detenerWebcam()">■ DETENER</button>
+          </ng-container>
+        </div>
+
+        <div class="db-biometric-info" *ngIf="fotoCapturada">
+          <div class="db-bio-row"><span class="db-bio-label">FUENTE</span><span class="db-bio-val db-bio-val--ok">{{ camaraCaptura ? 'CAMERA HUB' : 'CÁMARA LOCAL' }}</span></div>
+          <div class="db-bio-row"><span class="db-bio-label">ALGORITMO</span><span class="db-bio-val">EMBEDDINGS Dlib/ResNet</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div><!-- /modal empleado -->
+
+
+<!-- ══════════════════════════════════════════════════════════
+     MODAL: CREAR/EDITAR ZONA
+     Modelo Area: area_id, nombre, ubicacion, camara_ip
+══════════════════════════════════════════════════════════ -->
+<div class="db-modal-overlay" *ngIf="modalAreaOpen" (click)="cerrarModalArea()">
+  <div class="db-modal db-modal--sm" (click)="$event.stopPropagation()">
+    <div class="db-modal-header">
+      <div class="db-modal-title-wrap">
+        <span class="db-modal-eyebrow">{{ areaEditando?'EDITAR':'NUEVA' }} ZONA DE CONTROL</span>
+        <h3 class="db-modal-title">{{ areaEditando?areaEditando.nombre:'Configurar Zona' }}</h3>
+      </div>
+      <button class="db-modal-close" (click)="cerrarModalArea()">✕</button>
+    </div>
+    <div class="db-modal-body db-modal-body--single">
+      <div class="db-modal-col db-modal-col--full">
+        <p class="db-modal-section-label">DATOS DE LA ZONA</p>
+        
+        <div class="db-field-group">
+          <label class="db-field-label">NOMBRE DE LA ZONA *</label>
+          <input class="db-field-input" [(ngModel)]="formArea.nombre" placeholder="Ej: Sala de Servidores, Laboratorio B2"/>
+        </div>
+
+        <div class="db-field-group">
+          <label class="db-field-label">UBICACIÓN</label>
+          <input class="db-field-input" [(ngModel)]="formArea.ubicacion" placeholder="Ej: Piso 3, Edificio A"/>
+        </div>
+
+        <div class="db-field-group">
+          <label class="db-field-label">CÁMARA ASIGNADA *</label>
+          
+          <select class="db-field-select" [(ngModel)]="formArea.camara_ip" *ngIf="camaras.length > 0">
+            <option value="">— Sin cámara asignada —</option>
+            <option *ngFor="let c of camaras; trackBy: trackByCamId" [value]="c.stream_url">
+              {{ c.nombre || 'CAM_'+c.id }} — [IDX:{{ c.hardware_index }}]
+            </option>
+          </select>
+
+          <input class="db-field-input" [(ngModel)]="formArea.camara_ip" *ngIf="camaras.length === 0"
+                 placeholder="/api/cameras/stream/0/"/>
+          
+          <span class="db-field-hint">Se vinculará el flujo de video de camera_hub a esta zona para el monitoreo.</span>
+        </div>
+
+        <div class="db-form-msg db-form-msg--error" *ngIf="formAreaError">⚠ {{ formAreaError }}</div>
+        <div class="db-form-msg db-form-msg--ok" *ngIf="formAreaSuccess">✓ {{ formAreaSuccess }}</div>
+
+        <div class="db-modal-btn-row">
+          <button class="db-btn-ghost" (click)="cerrarModalArea()">CANCELAR</button>
+          <button class="db-btn-primary" style="flex:1" (click)="guardarArea()" [disabled]="isSaving">
+            {{ isSaving?'GUARDANDO...':areaEditando?'ACTUALIZAR ZONA':'CREAR ZONA' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div><!-- /modal área -->
+
+
+<!-- ══════════════════════════════════════════════════════════
+     MODAL: CREAR/EDITAR USUARIO DE SISTEMA
+══════════════════════════════════════════════════════════ -->
+<div class="db-modal-overlay" *ngIf="modalUsuarioSistemaOpen" (click)="cerrarModalUsuarioSistema()">
+  <div class="db-modal db-modal--sm" (click)="$event.stopPropagation()">
+    <div class="db-modal-header">
+      <div class="db-modal-title-wrap">
+        <span class="db-modal-eyebrow">{{ usuarioSistemaEditando?'EDITAR':'NUEVA' }} CUENTA DE SISTEMA</span>
+        <h3 class="db-modal-title">Credenciales del Panel</h3>
+      </div>
+      <button class="db-modal-close" (click)="cerrarModalUsuarioSistema()">✕</button>
+    </div>
+    <div class="db-modal-body db-modal-body--single">
+      <div class="db-modal-col db-modal-col--full">
+        <p class="db-modal-section-label">CREDENCIALES</p>
+        <div class="db-field-group">
+          <label class="db-field-label">USERNAME *</label>
+          <input class="db-field-input" [(ngModel)]="formUsuarioSistema.username" placeholder="nombre.apellido" autocomplete="off"/>
+        </div>
+        <div class="db-field-group">
+          <label class="db-field-label">{{ usuarioSistemaEditando ? 'NUEVA CONTRASEÑA (vacío = sin cambios)' : 'CONTRASEÑA *' }}</label>
+          <input class="db-field-input" type="password" [(ngModel)]="formUsuarioSistema.password" placeholder="Mínimo 8 caracteres" autocomplete="new-password"/>
+        </div>
+        <p class="db-modal-section-label" style="margin-top:6px">VINCULAR A EMPLEADO</p>
+        <div class="db-field-group">
+          <label class="db-field-label">EMPLEADO (PERFIL) *</label>
+          <select class="db-field-select" [(ngModel)]="formUsuarioSistema.perfil_id">
+            <option value="">SELECCIONAR EMPLEADO...</option>
+            <option *ngFor="let e of empleados" [value]="e.usuario_id">{{ e.nombre_completo }} — {{ e.rol?.nombre }}</option>
+          </select>
+          <span class="db-field-hint">El rol del panel se hereda del empleado vinculado.</span>
+        </div>
+        <div class="db-field-group">
+          <label class="db-field-label">ESTADO</label>
+          <select class="db-field-select" [(ngModel)]="formUsuarioSistema.is_active">
+            <option [value]="true">ACTIVO</option>
+            <option [value]="false">INACTIVO</option>
+          </select>
+        </div>
+        <div class="db-form-msg db-form-msg--error" *ngIf="formUsuarioSistemaError">⚠ {{ formUsuarioSistemaError }}</div>
+        <div class="db-form-msg db-form-msg--ok" *ngIf="formUsuarioSistemaSuccess">✓ {{ formUsuarioSistemaSuccess }}</div>
+        <div class="db-modal-btn-row" style="margin-top:4px">
+          <button class="db-btn-ghost" (click)="cerrarModalUsuarioSistema()">CANCELAR</button>
+          <button class="db-btn-primary" style="flex:1" (click)="guardarUsuarioSistema()" [disabled]="isSaving">
+            {{ isSaving?'GUARDANDO...':usuarioSistemaEditando?'ACTUALIZAR':'CREAR CUENTA' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div><!-- /modal usuario sistema -->
+
+
+<!-- Modal: Confirmar eliminar empleado -->
+<div class="db-modal-overlay db-modal-overlay--danger" *ngIf="modalEliminarOpen" (click)="cancelarEliminar()">
+  <div class="db-modal db-modal--sm" (click)="$event.stopPropagation()">
+    <div class="db-modal-header">
+      <div class="db-modal-title-wrap">
+        <span class="db-modal-eyebrow db-modal-eyebrow--danger">ACCIÓN IRREVERSIBLE</span>
+        <h3 class="db-modal-title">Eliminar Identidad Biométrica</h3>
+      </div>
+    </div>
+    <div class="db-modal-body db-modal-body--center">
+      <div class="db-delete-target">
+        <span class="db-delete-avatar">{{ getInitials(empleadoAEliminar?.nombre_completo||'') }}</span>
+        <div>
+          <p class="db-delete-name">{{ empleadoAEliminar?.nombre_completo }}</p>
+          <p class="db-delete-id">CC {{ empleadoAEliminar?.identificacion }}</p>
+        </div>
+      </div>
+      <p class="db-modal-warn-text">Se eliminarán todos sus datos biométricos.<br/><small>Esta acción no se puede deshacer.</small></p>
+      <div class="db-modal-btn-row">
+        <button class="db-btn-ghost" (click)="cancelarEliminar()">CANCELAR</button>
+        <button class="db-btn-danger" (click)="eliminarEmpleado()" [disabled]="isSaving">{{ isSaving?'ELIMINANDO...':'CONFIRMAR' }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Confirmar eliminar área -->
+<div class="db-modal-overlay db-modal-overlay--danger" *ngIf="modalEliminarAreaOpen" (click)="cancelarEliminarArea()">
+  <div class="db-modal db-modal--sm" (click)="$event.stopPropagation()">
+    <div class="db-modal-header">
+      <div class="db-modal-title-wrap">
+        <span class="db-modal-eyebrow db-modal-eyebrow--danger">ELIMINAR ZONA</span>
+        <h3 class="db-modal-title">{{ areaAEliminar?.nombre }}</h3>
+      </div>
+    </div>
+    <div class="db-modal-body db-modal-body--center">
+      <p class="db-modal-warn-text">Se eliminará la zona y todos sus permisos configurados.<br/><small>Los registros de acceso se conservarán.</small></p>
+      <div class="db-modal-btn-row">
+        <button class="db-btn-ghost" (click)="cancelarEliminarArea()">CANCELAR</button>
+        <button class="db-btn-danger" (click)="eliminarArea()" [disabled]="isSaving">{{ isSaving?'ELIMINANDO...':'CONFIRMAR' }}</button>
+      </div>
+    </div>
+  </div>
+</div>

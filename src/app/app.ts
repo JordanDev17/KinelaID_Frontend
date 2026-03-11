@@ -3,13 +3,14 @@ import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common'; // Agregado
 import { Registros } from './components/registros/registros';
 import { Background } from './services/background';
-
+import { Footer } from './components/footer/footer/footer';
+import { Monitoreo } from "./components/camera_streaming/monitoreo/monitoreo";
 
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, CommonModule],
+  imports: [RouterOutlet, CommonModule, Footer, Monitoreo],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })

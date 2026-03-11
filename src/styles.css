@@ -1,3 +1,5 @@
+@import "leaflet/dist/leaflet.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -394,4 +396,148 @@ body::-webkit-scrollbar-thumb:hover {
   line-height: 1.8;
   color: rgba(255, 255, 255, 0.7);
   margin-bottom: 1.5rem;
+}
+
+
+/*Estilos leaflet contacto */
+
+/* ============================================================
+   KINELA CONTACT — Estilos globales para Leaflet
+   Pegar en styles.css (al final, después de tus estilos existentes)
+
+   POR QUÉ AQUÍ:
+   Leaflet crea los divIcon dinámicamente en JS, fuera del template
+   de Angular. El compilador de Angular no puede añadir el atributo
+   _ngcontent a esos divs, así que los estilos encapsulados del
+   componente (contact.css) NUNCA los matchean.
+   El CSS global no tiene encapsulación → aplica a todo el DOM.
+   ============================================================ */
+
+/* ── MARCADOR HOST ──
+   Anula los defaults de Leaflet: background:white, border:1px solid #666 */
+.ck-mh {
+  background: transparent !important;
+  border: none !important;
+  position: relative !important;
+  overflow: visible !important;
+}
+
+/* Pulso exterior */
+.ck-mp {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  animation: ck-pulse-ring 2s ease-out infinite;
+  pointer-events: none;
+}
+
+/* Core central */
+.ck-mc {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40%;
+  height: 40%;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Colores por tipo */
+.ck-mh--primary .ck-mp { border: 2px solid #00f0ff; box-shadow: 0 0 10px rgba(0,240,255,0.4); }
+.ck-mh--primary .ck-mc { background: #00f0ff; box-shadow: 0 0 10px #00f0ff, 0 0 22px rgba(0,240,255,0.6); }
+
+.ck-mh--relay .ck-mp   { border: 2px solid #ffb800; box-shadow: 0 0 10px rgba(255,184,0,0.4); animation-delay: 0.5s; }
+.ck-mh--relay .ck-mc   { background: #ffb800; box-shadow: 0 0 10px #ffb800, 0 0 22px rgba(255,184,0,0.5); }
+
+.ck-mh--sensor .ck-mp  { border: 2px solid #00ff88; box-shadow: 0 0 10px rgba(0,255,136,0.4); animation-delay: 1s; }
+.ck-mh--sensor .ck-mc  { background: #00ff88; box-shadow: 0 0 10px #00ff88, 0 0 22px rgba(0,255,136,0.5); }
+
+.ck-mh--node .ck-mp    { border: 2px solid #8b5cf6; box-shadow: 0 0 10px rgba(139,92,246,0.4); animation-delay: 1.5s; }
+.ck-mh--node .ck-mc    { background: #8b5cf6; box-shadow: 0 0 10px #8b5cf6, 0 0 22px rgba(139,92,246,0.5); }
+
+@keyframes ck-pulse-ring {
+  0%   { transform: scale(0.5); opacity: 1; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* ── POPUP ── */
+.ck-popup-wrap .leaflet-popup-content-wrapper {
+  background: rgba(5, 8, 18, 0.96) !important;
+  border: 1px solid rgba(0, 240, 255, 0.35) !important;
+  border-radius: 3px !important;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.2), inset 0 0 20px rgba(0,0,0,0.4) !important;
+  padding: 0 !important;
+}
+
+.ck-popup-wrap .leaflet-popup-tip-container { display: none !important; }
+.ck-popup-wrap .leaflet-popup-content { margin: 0 !important; width: auto !important; }
+
+.ck-popup {
+  padding: 14px 16px;
+  min-width: 200px;
+  font-family: 'Courier New', monospace;
+}
+
+.ck-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.ck-popup-type {
+  font-size: 8px;
+  letter-spacing: 4px;
+  color: rgba(0, 240, 255, 0.45);
+  font-weight: 700;
+}
+
+.ck-popup-status {
+  font-size: 8px;
+  letter-spacing: 3px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+
+.ck-popup-status--activo  { color: #00ff88; border: 1px solid rgba(0,255,136,0.3); background: rgba(0,255,136,0.08); }
+.ck-popup-status--standby { color: #ffb800; border: 1px solid rgba(255,184,0,0.3); background: rgba(255,184,0,0.08); }
+
+.ck-popup-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #00f0ff;
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+  text-shadow: 0 0 12px rgba(0,240,255,0.4);
+}
+
+.ck-popup-desc {
+  font-size: 11px;
+  color: rgba(255,255,255,0.65);
+  line-height: 1.5;
+  margin-bottom: 8px;
+  letter-spacing: 0.3px;
+  font-family: -apple-system, sans-serif;
+}
+
+.ck-popup-coords {
+  font-size: 9px;
+  color: rgba(0, 240, 255, 0.35);
+  letter-spacing: 1px;
+}
+
+/* ── LEAFLET Z-INDEX STACK (global) ── */
+.leaflet-tile-pane    { z-index: 200 !important; }
+.leaflet-overlay-pane { z-index: 400 !important; }
+.leaflet-shadow-pane  { z-index: 500 !important; }
+.leaflet-marker-pane  { z-index: 600 !important; }
+.leaflet-tooltip-pane { z-index: 700 !important; }
+.leaflet-popup-pane   { z-index: 800 !important; }
+
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+  pointer-events: auto !important;
 }
