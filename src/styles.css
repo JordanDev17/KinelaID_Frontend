@@ -1,5 +1,5 @@
 @import "leaflet/dist/leaflet.css";
-
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Rajdhani:wght@500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -329,6 +329,7 @@ html, body {
   position: relative;
   z-index: 10;
   min-height: 100vh;
+  
 }
 
 /* ============================================

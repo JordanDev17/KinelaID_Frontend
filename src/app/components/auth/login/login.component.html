@@ -1,223 +1,463 @@
-<!-- ============================================================
-     login.component.html — KinelaID Auth v2.1
-     
-     FIXES:
-     - @for track usa cam.id (PK real) → resuelve NG0955
-     - selector bindea selectedCamId y llama cambiarCamara()
-     - canvas siempre presente en el DOM (no condicional)
-       para que @ViewChild lo encuentre al capturar
-     - preview <img> solo para visualización
-     - captura real: fetch snapshot endpoint (sin tainted canvas)
-     ============================================================ -->
+<div class="lg-shell">
 
-<div class="min-h-screen w-full flex items-center justify-center relative overflow-hidden">
+  <!-- ══ CURSOR ══ -->
+  <div class="lg-cursor"      aria-hidden="true"></div>
+  <div class="lg-cursor-ring" aria-hidden="true"></div>
 
-  <div #loginCard
-       class="w-full max-w-[440px] bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-10 shadow-2xl z-10">
+  <!-- ══ FONDO: GRID + SCAN ══ -->
+  <div class="lg-bg" aria-hidden="true">
+    <div class="lg-bg-grid"></div>
+    <div class="lg-bg-vignette"></div>
+    <div class="lg-bg-scan"></div>
+  </div>
 
-    <!-- ── Header ── -->
-    <div class="text-center mb-10">
-      <h1 class="text-4xl font-black text-white tracking-tighter italic">
-        KINELA<span class="text-[#00ff88]">ID</span>
-      </h1>
-      <p class="text-gray-400 text-[10px] tracking-[0.3em] uppercase mt-2 font-medium">
-        Security &amp; Control
-      </p>
+  <!-- ══ ESQUINAS VIEWPORT ══ -->
+  <div class="lg-corner lg-corner--tl" aria-hidden="true"></div>
+  <div class="lg-corner lg-corner--tr" aria-hidden="true"></div>
+  <div class="lg-corner lg-corner--bl" aria-hidden="true"></div>
+  <div class="lg-corner lg-corner--br" aria-hidden="true"></div>
+
+  <!-- ══ PANEL DE ESTADO (izquierda) ══ -->
+  <aside class="lg-status-panel" aria-hidden="true">
+    <div class="lg-sp-logo">
+      KINELA<span>ID</span>
     </div>
 
-    <!-- ════════════════════════════════════════
-         PASO 1: CREDENCIALES
-    ════════════════════════════════════════ -->
-    @if (step === 'CREDENTIALS') {
-      <div class="form-content space-y-6">
+    <div class="lg-sp-divider"></div>
 
-        <div class="space-y-2">
-          <label class="text-[10px] uppercase tracking-widest text-[#00ff88] font-bold ml-2">
-            Identidad
-          </label>
-          <input [(ngModel)]="credentials.username" type="text" placeholder="Usuario"
-                 class="w-full bg-white/10 border border-white/10 rounded-2xl p-4 text-white
-                        focus:outline-none focus:border-[#00ff88] transition-all"/>
-        </div>
-
-        <div class="space-y-2">
-          <label class="text-[10px] uppercase tracking-widest text-[#00ff88] font-bold ml-2">
-            Llave
-          </label>
-          <input [(ngModel)]="credentials.password" type="password" placeholder="••••••••"
-                 class="w-full bg-white/10 border border-white/10 rounded-2xl p-4 text-white
-                        focus:outline-none focus:border-[#00ff88] transition-all"/>
-        </div>
-
-        @if (errorMessage) {
-          <p class="text-red-400 text-xs text-center tracking-wide">{{ errorMessage }}</p>
-        }
-
-        <button (click)="onSubmit()" [disabled]="isLoading"
-                class="w-full bg-[#00ff88] text-[#070b14] font-black tracking-widest py-4
-                       rounded-2xl active:scale-95 disabled:opacity-50 transition-all">
-          {{ isLoading ? 'PROCESANDO...' : 'ENTRAR' }}
-        </button>
-
+    <div class="lg-sp-block">
+      <span class="lg-sp-label">SISTEMA</span>
+      <div class="lg-sp-row">
+        <span class="lg-sp-pip"></span>
+        <span class="lg-sp-val lg-sp-val--on">OPERACIONAL</span>
       </div>
-    }
+    </div>
 
-    <!-- ════════════════════════════════════════
-         PASO 2: VERIFICACIÓN BIOMÉTRICA
-    ════════════════════════════════════════ -->
-    @if (step === 'BIOMETRIC') {
-      <div class="biometric-content space-y-5">
+    <div class="lg-sp-block">
+      <span class="lg-sp-label">MOTOR IA</span>
+      <span class="lg-sp-val">DLIB · RESNET50</span>
+    </div>
 
-        <!-- Selector de cámara (visible solo si hay ≥2 cámaras) -->
-        @if (camaras.length > 1) {
-          <div class="flex flex-col gap-1">
-            <label class="text-[9px] uppercase tracking-widest text-[#00ff88] font-bold ml-1">
-              Cámara de captura
-            </label>
-            <!--
-              CORRECCIÓN: se bindea a selectedCamId (número, id PK real).
-              cambiarCamara recibe el valor del <option> y lo convierte a Number.
-            -->
-            <select
-              [ngModel]="selectedCamId"
-              (ngModelChange)="cambiarCamara($event)"
-              class="bg-white/5 border border-white/10 rounded-xl p-3 text-white/70
-                     text-xs font-mono focus:outline-none focus:border-[#00ff88]">
-              <!--
-                CORRECCIÓN: track cam.id (PK real, siempre único).
-                Antes usaba cam.camara_id → undefined → NG0955.
-                El [value] es cam.id para que ngModelChange reciba el id correcto.
-              -->
-              @for (cam of camaras; track cam.id) {
-                <option [value]="cam.id">{{ getCamLabel(cam) }}</option>
-              }
-            </select>
+    <div class="lg-sp-block">
+      <span class="lg-sp-label">PRECISIÓN</span>
+      <span class="lg-sp-val lg-sp-val--accent">99.7%</span>
+    </div>
+
+    <div class="lg-sp-block">
+      <span class="lg-sp-label">LATENCIA</span>
+      <span class="lg-sp-val">&lt; 80ms</span>
+    </div>
+
+    <div class="lg-sp-divider"></div>
+
+    <div class="lg-sp-block">
+      <span class="lg-sp-label">NODO</span>
+      <span class="lg-sp-val">MSQ · 01</span>
+    </div>
+
+    <div class="lg-sp-block">
+      <span class="lg-sp-label">UPTIME</span>
+      <span class="lg-sp-val">24/7</span>
+    </div>
+
+    <div class="lg-sp-divider"></div>
+
+    <div class="lg-sp-build">
+      <span class="lg-sp-label">BUILD</span>
+      <span class="lg-sp-mono">v3.0.0·AUTH</span>
+    </div>
+
+    <!-- Barra de actividad -->
+    <div class="lg-sp-activity">
+      <div class="lg-sp-activity-bar">
+        <div class="lg-sp-activity-fill"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══ TERMINAL PRINCIPAL ══ -->
+  <main class="lg-main">
+
+    <!-- Título barra superior -->
+    <div class="lg-terminal-bar">
+      <div class="lg-tb-dots">
+        <span class="lg-tb-dot lg-tb-dot--red"></span>
+        <span class="lg-tb-dot lg-tb-dot--amber"></span>
+        <span class="lg-tb-dot lg-tb-dot--green"></span>
+      </div>
+      <span class="lg-tb-title">KINELA_AUTH · SECURE_TERMINAL · v3.0</span>
+      <div class="lg-tb-status">
+        <span class="lg-tb-pip"></span>
+        <span>ENCRYPTED</span>
+      </div>
+    </div>
+
+    <!-- Cuerpo del terminal -->
+    <div class="lg-terminal-body">
+
+      <!-- ──────────────────────────────────
+           PASO 1: CREDENCIALES
+      ────────────────────────────────── -->
+      @if (step === 'CREDENTIALS') {
+        <div class="lg-step lg-step--creds">
+
+          <!-- Header -->
+          <div class="lg-step-header">
+            <div class="lg-step-tag">01 // AUTENTICACIÓN</div>
+            <h1 class="lg-step-title">Ingresa al<br/><em>Sistema</em></h1>
+            <p class="lg-step-sub">Introduce tus credenciales de acceso</p>
           </div>
-        }
 
-        <!-- Visor circular -->
-        <div class="relative w-64 h-64 mx-auto">
-          <div class="pulse-ring absolute inset-0 border-2 border-[#00ff88] rounded-full"></div>
+          <!-- Formulario -->
+          <div class="lg-form">
 
-          <div class="w-full h-full rounded-full bg-black overflow-hidden border-4 border-white/10 relative">
-
-            <!--
-              MODO STREAM: <img> para previsualización VISUAL únicamente.
-              La captura real NO usa este <img> (evita tainted canvas).
-              La captura usa fetch() al endpoint /cameras/capture/{idx}/.
-            -->
-            @if (modoCaptura === 'stream' && streamPreviewUrl && !fotoCapturada) {
-              <img #streamImg
-                   [src]="streamPreviewUrl"
-                   (error)="onStreamError()"
-                   class="w-full h-full object-cover"
-                   alt="Preview stream"/>
-            }
-
-            <!-- MODO LOCAL: <video> de getUserMedia -->
-            @if (modoCaptura === 'local' && !fotoCapturada) {
-              <video #videoLocal autoplay playsinline
-                     class="w-full h-full object-cover"></video>
-            }
-
-            <!--
-              Canvas: siempre en el DOM pero oculto hasta que haya foto.
-              @ViewChild lo necesita disponible para la captura local.
-              En modo stream no se dibuja en canvas (se usa FileReader).
-            -->
-            <canvas #canvasCaptura
-                    [class.hidden]="!fotoCapturada"
-                    class="w-full h-full object-cover absolute inset-0"></canvas>
-
-            <!-- Línea de escaneo animada -->
-            @if (!fotoCapturada) {
-              <div class="scan-line-video"></div>
-            }
-
-            <!-- Indicador de foto capturada exitosamente -->
-            @if (fotoCapturada) {
-              <div class="absolute inset-0 flex flex-col items-center justify-center gap-2
-                          bg-[#00ff88]/10 border border-[#00ff88]/20 z-10">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
-                     stroke="#00ff88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <path d="M7 12l4 4 6-7"/>
+            <div class="lg-field">
+              <label class="lg-field-label">
+                <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.4">
+                  <circle cx="8" cy="6" r="3.5"/>
+                  <path d="M2 15c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke-linecap="round"/>
                 </svg>
-                <span class="text-[#00ff88] text-[9px] font-black tracking-[4px]">CAPTURADO</span>
+                IDENTIDAD
+              </label>
+              <div class="lg-input-wrap">
+                <input
+                  [(ngModel)]="credentials.username"
+                  type="text"
+                  placeholder="usuario.sistema"
+                  class="lg-input"
+                  autocomplete="username"
+                  (keydown.enter)="onSubmit()"/>
+                <div class="lg-input-bar"></div>
+              </div>
+            </div>
+
+            <div class="lg-field">
+              <label class="lg-field-label">
+                <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.4">
+                  <rect x="3" y="7" width="10" height="8" rx="1.5"/>
+                  <path d="M5 7V5a3 3 0 016 0v2" stroke-linecap="round"/>
+                  <circle cx="8" cy="11" r="1.5" fill="currentColor" stroke="none"/>
+                </svg>
+                LLAVE DE ACCESO
+              </label>
+              <div class="lg-input-wrap">
+                <input
+                  [(ngModel)]="credentials.password"
+                  type="password"
+                  placeholder="••••••••••"
+                  class="lg-input"
+                  autocomplete="current-password"
+                  (keydown.enter)="onSubmit()"/>
+                <div class="lg-input-bar"></div>
+              </div>
+            </div>
+
+            <!-- Error -->
+            @if (errorMessage) {
+              <div class="lg-error">
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.4">
+                  <path d="M8 3v6M8 11v1" stroke-linecap="round"/>
+                  <circle cx="8" cy="8" r="6.5"/>
+                </svg>
+                {{ errorMessage }}
               </div>
             }
 
-            <!-- Indicador de captura en proceso -->
-            @if (capturando) {
-              <div class="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
-                <div class="w-8 h-8 border-2 border-white/10 border-t-[#00ff88] rounded-full animate-spin"></div>
+            <!-- Botón -->
+            <button
+              class="lg-btn-primary"
+              (click)="onSubmit()"
+              [disabled]="isLoading">
+              @if (isLoading) {
+                <span class="lg-btn-spinner"></span>
+                PROCESANDO...
+              } @else {
+                <svg viewBox="0 0 18 18" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M9 2l7 7-7 7M2 9h14" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                INICIAR SESIÓN
+              }
+            </button>
+
+          </div><!-- /form -->
+
+          <!-- Footer del paso -->
+          <div class="lg-step-footer">
+            <span class="lg-sf-line"></span>
+            <span class="lg-sf-text">ACCESO RESTRINGIDO · SOLO PERSONAL AUTORIZADO</span>
+            <span class="lg-sf-line"></span>
+          </div>
+
+        </div>
+      }
+
+      <!-- ──────────────────────────────────
+           PASO 2: VERIFICACIÓN BIOMÉTRICA
+      ────────────────────────────────── -->
+      @if (step === 'BIOMETRIC') {
+        <div class="lg-step lg-step--bio">
+
+          <!-- Header -->
+          <div class="lg-step-header lg-step-header--bio">
+            <div class="lg-step-tag">02 // VERIFICACIÓN BIOMÉTRICA</div>
+            <h2 class="lg-step-title lg-step-title--sm">
+              Verificación<br/><em>Facial</em>
+            </h2>
+          </div>
+
+          <!-- Layout biométrico: scanner + controles -->
+          <div class="lg-bio-layout">
+
+            <!-- ── SCANNER ── -->
+            <div class="lg-scanner-wrap">
+
+              <!-- Esquinas del scanner -->
+              <div class="lg-sc-corner lg-sc-corner--tl"></div>
+              <div class="lg-sc-corner lg-sc-corner--tr"></div>
+              <div class="lg-sc-corner lg-sc-corner--bl"></div>
+              <div class="lg-sc-corner lg-sc-corner--br"></div>
+
+              <!-- Labels de medición -->
+              <div class="lg-sc-label lg-sc-label--top">FACE · SCAN</div>
+              <div class="lg-sc-label lg-sc-label--bot">LANDMARKS · 468pts</div>
+              <div class="lg-sc-label lg-sc-label--left">ID</div>
+              <div class="lg-sc-label lg-sc-label--right">3D</div>
+
+              <!-- Área de video -->
+              <div class="lg-sc-feed">
+
+                <!-- Grid overlay -->
+                <div class="lg-sc-grid" *ngIf="!fotoCapturada"></div>
+
+                <!-- Stream IP preview -->
+                @if (modoCaptura === 'stream' && streamPreviewUrl && !fotoCapturada) {
+                  <img
+                    #streamImg
+                    [src]="streamPreviewUrl"
+                    (error)="onStreamError()"
+                    class="lg-sc-video"
+                    alt="Stream preview"/>
+                }
+
+                <!-- Webcam local -->
+                @if (modoCaptura === 'local' && !fotoCapturada) {
+                  <video
+                    #videoLocal
+                    autoplay
+                    playsinline
+                    class="lg-sc-video"></video>
+                }
+
+                <!-- Canvas (siempre en DOM) -->
+                <canvas
+                  #canvasCaptura
+                  class="lg-sc-canvas"
+                  [class.lg-sc-canvas--visible]="fotoCapturada"></canvas>
+
+                <!-- Scan line activa -->
+                @if (!fotoCapturada && !capturando) {
+                  <div class="lg-sc-scan-line"></div>
+                }
+
+                <!-- Reticle facial cuando hay feed activo -->
+                @if (!fotoCapturada && (streamPreviewUrl || modoCaptura === 'local')) {
+                  <div class="lg-sc-reticle">
+                    <div class="lg-sc-reticle-tl"></div>
+                    <div class="lg-sc-reticle-tr"></div>
+                    <div class="lg-sc-reticle-bl"></div>
+                    <div class="lg-sc-reticle-br"></div>
+                    <div class="lg-sc-reticle-cross-h"></div>
+                    <div class="lg-sc-reticle-cross-v"></div>
+                    <div class="lg-sc-reticle-scan"></div>
+                  </div>
+                }
+
+                <!-- Spinner de captura -->
+                @if (capturando) {
+                  <div class="lg-sc-capturing">
+                    <div class="lg-sc-cap-ring"></div>
+                    <span>CAPTURANDO</span>
+                  </div>
+                }
+
+                <!-- Éxito de captura -->
+                @if (fotoCapturada) {
+                  <div class="lg-sc-success">
+                    <div class="lg-sc-success-icon">
+                      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#00ff88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 12l5 5L20 7"/>
+                      </svg>
+                    </div>
+                    <span>FRAME · CAPTURADO</span>
+                  </div>
+                }
+
+                <!-- Placeholder sin feed -->
+                @if (!streamPreviewUrl && modoCaptura !== 'local' && !fotoCapturada) {
+                  <div class="lg-sc-placeholder">
+                    <svg viewBox="0 0 60 60" width="40" height="40" fill="none">
+                      <circle cx="30" cy="24" r="10" stroke="rgba(0,240,255,0.18)" stroke-width="1.5"/>
+                      <path d="M10 52c0-11 9-18 20-18s20 7 20 18" stroke="rgba(0,240,255,0.14)" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    <span>SIN SEÑAL</span>
+                  </div>
+                }
+
+              </div><!-- /feed -->
+
+              <!-- Barra de confianza (lateral derecha) -->
+              <div class="lg-sc-confidence">
+                <div class="lg-sc-conf-track">
+                  <div class="lg-sc-conf-fill"
+                       [style.height.%]="fotoCapturada ? 97.7 : 0"></div>
+                </div>
+                <span class="lg-sc-conf-label">CONF</span>
               </div>
-            }
-          </div>
+
+            </div><!-- /scanner -->
+
+            <!-- ── CONTROLES ── -->
+            <div class="lg-bio-controls">
+
+              <!-- Selector de cámara -->
+              @if (camaras.length > 1) {
+                <div class="lg-bio-field">
+                  <label class="lg-field-label">
+                    <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.4">
+                      <rect x="1" y="3" width="11" height="8" rx="1.5"/>
+                      <path d="M12 6l3-2v6l-3-2V6z"/>
+                    </svg>
+                    FUENTE DE CAPTURA
+                  </label>
+                  <div class="lg-input-wrap">
+                    <select
+                      [ngModel]="selectedCamId"
+                      (ngModelChange)="cambiarCamara($event)"
+                      class="lg-select">
+                      @for (cam of camaras; track cam.id) {
+                        <option [value]="cam.id">{{ getCamLabel(cam) }}</option>
+                      }
+                    </select>
+                    <div class="lg-input-bar"></div>
+                  </div>
+                </div>
+              }
+
+              <!-- Indicador de modo -->
+              <div class="lg-bio-mode">
+                <span class="lg-bio-mode-pip"
+                      [class.lg-bio-mode-pip--green]="!streamError"
+                      [class.lg-bio-mode-pip--red]="streamError">
+                </span>
+                @if (modoCaptura === 'stream') {
+                  <span>STREAM · CAMERA_HUB</span>
+                } @else {
+                  <span>WEBCAM · LOCAL</span>
+                }
+              </div>
+
+              <!-- Error de stream -->
+              @if (streamError) {
+                <div class="lg-bio-warn">
+                  <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.4">
+                    <path d="M8 3v6M8 11v1" stroke-linecap="round"/>
+                    <path d="M1 14L8 2l7 12H1z" stroke-linejoin="round"/>
+                  </svg>
+                  Stream inactivo — camera_hub no disponible
+                  <button class="lg-bio-warn-btn" (click)="iniciarCamaraLocal()">
+                    USAR WEBCAM →
+                  </button>
+                </div>
+              }
+
+              <!-- Error de verificación -->
+              @if (errorMessage) {
+                <div class="lg-error">
+                  <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.4">
+                    <path d="M8 3v6M8 11v1" stroke-linecap="round"/>
+                    <circle cx="8" cy="8" r="6.5"/>
+                  </svg>
+                  {{ errorMessage }}
+                </div>
+              }
+
+              <!-- Botones de acción -->
+              <div class="lg-bio-actions">
+
+                @if (!fotoCapturada && !capturando) {
+                  <button class="lg-btn-secondary" (click)="capturarFrame()">
+                    <svg viewBox="0 0 18 18" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <circle cx="9" cy="9" r="7"/>
+                      <circle cx="9" cy="9" r="3" fill="currentColor" stroke="none"/>
+                    </svg>
+                    TOMAR SNAPSHOT
+                  </button>
+                }
+
+                <button
+                  class="lg-btn-primary"
+                  (click)="captureAndVerify()"
+                  [disabled]="isLoading || capturando">
+                  @if (isLoading) {
+                    <span class="lg-btn-spinner"></span>
+                    VERIFICANDO...
+                  } @else if (capturando) {
+                    <span class="lg-btn-spinner"></span>
+                    CAPTURANDO...
+                  } @else if (fotoCapturada) {
+                    <svg viewBox="0 0 18 18" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M5 9l3 3 5-6" stroke-linecap="round" stroke-linejoin="round"/>
+                      <circle cx="9" cy="9" r="7.5"/>
+                    </svg>
+                    CONFIRMAR IDENTIDAD
+                  } @else {
+                    <svg viewBox="0 0 18 18" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <circle cx="9" cy="9" r="7"/>
+                      <circle cx="9" cy="9" r="3" fill="currentColor" stroke="none"/>
+                    </svg>
+                    CAPTURAR Y VERIFICAR
+                  }
+                </button>
+
+                @if (fotoCapturada && !isLoading) {
+                  <button class="lg-btn-ghost" (click)="repetirCaptura()">
+                    <svg viewBox="0 0 18 18" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M2 9a7 7 0 1 1 1.5 4.5" stroke-linecap="round"/>
+                      <path d="M2 14V9h5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    REPETIR CAPTURA
+                  </button>
+                }
+
+              </div><!-- /actions -->
+
+              <!-- Info del frame capturado -->
+              @if (fotoCapturada) {
+                <div class="lg-bio-meta">
+                  <div class="lg-bio-meta-row">
+                    <span class="lg-bio-meta-k">ORIGEN</span>
+                    <span class="lg-bio-meta-v">{{ modoCaptura === 'stream' ? 'IP · CAMERA_HUB' : 'WEBCAM · LOCAL' }}</span>
+                  </div>
+                  <div class="lg-bio-meta-row">
+                    <span class="lg-bio-meta-k">MOTOR</span>
+                    <span class="lg-bio-meta-v">DLIB · KINELA_IA</span>
+                  </div>
+                  <div class="lg-bio-meta-row">
+                    <span class="lg-bio-meta-k">ESTADO</span>
+                    <span class="lg-bio-meta-v lg-bio-meta-v--ok">LISTO PARA VERIFICAR</span>
+                  </div>
+                </div>
+              }
+
+            </div><!-- /controls -->
+
+          </div><!-- /bio-layout -->
+
         </div>
+      }
 
-        <!-- Error del stream + botón fallback a cámara local -->
-        @if (streamError) {
-          <div class="flex flex-col items-center gap-2">
-            <p class="text-red-400 text-[9px] tracking-wide text-center">
-              ⚠ Stream no disponible — camera_hub inactivo
-            </p>
-            <button (click)="iniciarCamaraLocal()"
-                    class="text-[#00ff88] text-[9px] font-bold tracking-widest border
-                           border-[#00ff88]/30 px-4 py-2 rounded-xl hover:bg-[#00ff88]/10 transition-all">
-              USAR CÁMARA LOCAL
-            </button>
-          </div>
-        }
+    </div><!-- /terminal-body -->
 
-        <!-- Indicador de modo activo -->
-        @if (!streamError && !fotoCapturada) {
-          <p class="text-white/30 text-[8px] tracking-widest uppercase text-center">
-            @if (modoCaptura === 'stream') {
-              ● STREAM · camera_hub · captura via snapshot
-            } @else {
-              ● CÁMARA LOCAL · getUserMedia
-            }
-          </p>
-        }
+  </main>
 
-        <!-- Mensaje de error de verificación -->
-        @if (errorMessage) {
-          <p class="text-red-400 text-xs text-center tracking-wide">{{ errorMessage }}</p>
-        }
-
-        <!-- Botones de acción -->
-        <div class="flex flex-col gap-3">
-
-          @if (!fotoCapturada && !capturando) {
-            <button (click)="capturarFrame()"
-                    class="w-full border border-[#00ff88]/30 text-[#00ff88] font-black
-                           tracking-widest py-3 rounded-2xl hover:bg-[#00ff88]/10 transition-all">
-              ⊙ CAPTURAR FRAME
-            </button>
-          }
-
-          <button (click)="captureAndVerify()" [disabled]="isLoading || capturando"
-                  class="w-full bg-[#00ff88] text-[#070b14] font-black tracking-widest py-4
-                         rounded-2xl shadow-lg active:scale-95 transition-all disabled:opacity-50">
-            @if (isLoading) { VERIFICANDO IDENTIDAD... }
-            @else if (capturando) { CAPTURANDO... }
-            @else if (fotoCapturada) { CONFIRMAR IDENTIDAD }
-            @else { CAPTURAR Y VERIFICAR }
-          </button>
-
-          @if (fotoCapturada && !isLoading) {
-            <button (click)="repetirCaptura()"
-                    class="w-full border border-white/10 text-white/40 font-bold
-                           tracking-widest py-3 rounded-2xl hover:border-white/20 transition-all text-sm">
-              ↺ REPETIR CAPTURA
-            </button>
-          }
-
-        </div>
-
-      </div>
-    }
-
-  </div>
 </div>

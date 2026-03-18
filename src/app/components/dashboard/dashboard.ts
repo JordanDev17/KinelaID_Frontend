@@ -36,7 +36,7 @@
 
 import {
   Component, OnInit, OnDestroy, AfterViewInit,
-  ElementRef, ViewChild, ChangeDetectorRef, NgZone
+  ElementRef, ViewChild, ChangeDetectorRef, NgZone, ViewEncapsulation 
 } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule }            from '@angular/forms';
@@ -109,7 +109,9 @@ interface Empleado {
   email?:          string | null;
   activo:          boolean;
   face_embedding?: number[] | null;
-  rol?:            { rol_id: number; nombre: string };
+  // El backend envía el objeto completo, pero para el form usaremos el ID
+  rol?:            Rol; 
+  rol_id?:         number; // Helper para el binding del select
 }
 
 /**
@@ -163,12 +165,14 @@ const ESTADO_COLORS: Record<string, string> = {
 
 const ROL_SCOPE: Record<string, string> = {
   'Administrador':        'CRUD · Zonas · Monitoreo · Usuarios Sistema',
+  'Gerente':              'CRUD · Zonas · Monitoreo · Usuarios Sistema',
   'Operador de Registro': 'Crear & Actualizar Empleados · Biometría',
   'Auditor':              'Consulta de Logs · Generación de Reportes',
   'Empleado':             'Sin acceso al panel',
 };
 
 const ROL_DESC: Record<string, string> = {
+  'Gerente':              'Gerencia',
   'Administrador':        'Acceso total al sistema',
   'Operador de Registro': 'Gestión biométrica de empleados',
   'Auditor':              'Solo lectura de logs y reportes',
@@ -186,7 +190,8 @@ type ViewName = 'overview' | 'empleados' | 'logs' | 'reportes' | 'areas' | 'usua
   standalone:  true,
   imports:     [CommonModule, FormsModule, DatePipe],
   templateUrl: './dashboard.html',
-  styleUrl:    './dashboard.css'
+  styleUrl:    './dashboard.css',
+  encapsulation: ViewEncapsulation.ShadowDom  
 })
 export class Dashboard implements OnInit, AfterViewInit, OnDestroy {
 
@@ -402,7 +407,8 @@ export class Dashboard implements OnInit, AfterViewInit, OnDestroy {
     private http:        HttpClient,
     private router:      Router,
     private cdr:         ChangeDetectorRef,
-    private ngZone:      NgZone
+    private ngZone:      NgZone,
+    private elRef:       ElementRef
   ) {}
 
   /* ════════════════════════════════════════════════════════
@@ -424,8 +430,10 @@ export class Dashboard implements OnInit, AfterViewInit, OnDestroy {
 
     // 3. Animaciones de entrada
     this.ngZone.runOutsideAngular(() => setTimeout(() => {
-      gsap.from('.db-shell', { opacity: 0, duration: 0.5, ease: 'power2.out' });
-      gsap.from('.db-sidebar', { x: -18, opacity: 0, duration: 0.4, ease: 'power2.out', delay: 0.08 });
+    const root = this.elRef.nativeElement.shadowRoot ?? this.elRef.nativeElement;
+    gsap.from(root.querySelector('.db-shell'),   { opacity: 0, duration: 0.5, ease: 'power2.out' });
+    gsap.from(root.querySelector('.db-sidebar'), { x: -18, opacity: 0, duration: 0.4, ease: 'power2.out', delay: 0.08 });
+
     }, 40));
   }
 
@@ -511,8 +519,12 @@ export class Dashboard implements OnInit, AfterViewInit, OnDestroy {
       this.isLoading = false;
       this.cdr.detectChanges();
 
+
       this.ngZone.runOutsideAngular(() => setTimeout(() => {
-        gsap.from('.db-kpi', { opacity: 0, y: 18, stagger: 0.07, duration: 0.45, ease: 'power2.out' });
+      const root = this.elRef.nativeElement.shadowRoot ?? this.elRef.nativeElement;
+      gsap.from(root.querySelectorAll('.db-kpi'), {
+        opacity: 0, y: 18, stagger: 0.07, duration: 0.45, ease: 'power2.out'
+      });
       }, 50));
     });
   }
@@ -759,13 +771,28 @@ export class Dashboard implements OnInit, AfterViewInit, OnDestroy {
     const estados = Object.keys(counts);
     if (!estados.length) { this.chartBars = []; return; }
     const maxVal = Math.max(...Object.values(counts));
-    const barW   = Math.min(55, (this.chartWidth-40)/estados.length - 10);
-    const gap    = (this.chartWidth-20)/estados.length;
+
+    // Mapa de etiquetas legibles — cubre estados en español e inglés
+    const LABEL_MAP: Record<string, string> = {
+      'APROBADO':                'APROBADO',
+      'DENEGADO_RECONOCIMIENTO': 'DEN·RECONOC',
+      'DENEGADO_DESCONOCIDO':    'DEN·DESCON',
+      'DENEGADO_PERMISO':        'DEN·PERMISO',
+      'DENIED':                  'DENEGADO',
+      'APPROVED':                'APROBADO',
+      'UNKNOWN':                 'DESCONOCIDO',
+    };
+
+    const barW = Math.min(60, (this.chartWidth - 40) / estados.length - 12);
+    const gap  = (this.chartWidth - 20) / estados.length;
+
     this.chartBars = estados.map((e, i) => ({
-      x: 20+i*gap+(gap-barW)/2, y: 0, w: barW,
-      h: Math.max(4, Math.round((counts[e]/maxVal)*160)),
-      color: ESTADO_COLORS[e] ?? '#00f0ff',
-      label: e.replace('DENEGADO_','DEN.').slice(0,10),
+      x:     20 + i * gap + (gap - barW) / 2,
+      y:     0,
+      w:     barW,
+      h:     Math.max(6, Math.round((counts[e] / maxVal) * 165)),
+      color: ESTADO_COLORS[e] ?? ESTADO_COLORS[e.toUpperCase()] ?? '#00f0ff',
+      label: LABEL_MAP[e] ?? LABEL_MAP[e.toUpperCase()] ?? e.replace('DENEGADO_', 'DEN·').slice(0, 12),
     }));
   }
 
@@ -801,91 +828,480 @@ export class Dashboard implements OnInit, AfterViewInit, OnDestroy {
     }
 
     this.ngZone.runOutsideAngular(() => setTimeout(() => {
-      gsap.fromTo('.db-view > *',
-        { opacity: 0, y: 10 },
-        { opacity: 1, y: 0, stagger: 0.04, duration: 0.3, ease: 'power2.out' }
-      );
+    const root = this.elRef.nativeElement.shadowRoot ?? this.elRef.nativeElement;
+    gsap.fromTo(
+      root.querySelectorAll('.db-view > *'),
+      { opacity: 0, y: 10 },
+      { opacity: 1, y: 0, stagger: 0.04, duration: 0.3, ease: 'power2.out' }
+    );
     }, 10));
   }
 
   toggleSidebar(): void { this.sidebarCollapsed = !this.sidebarCollapsed; }
 
-  /* ════════════════════════════════════════════════════════
-     CRUD EMPLEADOS
-     Modelo: nombre_completo, identificacion, email, rol
-     SIN campo 'cargo'
-  ════════════════════════════════════════════════════════ */
 
-  openModalEmpleado(): void {
-    this.empleadoEditando = null; this.formError = ''; this.formSuccess = '';
-    this.fotoCapturada = false; this.fotoBase64 = ''; this.webcamActiva = false;
-    this.camaraCaptura = ''; this.streamCapturaError = false;
-    this.formEmpleado  = { nombre_completo:'', identificacion:'', email:'', rol:'' };
-    this.modalEmpleadoOpen = true;
+
+  /* METODOS DE SOPORTE*/
+  /**
+ * Resuelve la descripción del alcance del rol para el UI.
+ * Corrige el error TS2551 al mapear el ID del select con la constante ROL_SCOPE.
+ */
+getRolScope(rolId: any): string {
+  if (!rolId) return '';
+  
+  // Buscamos el objeto rol completo en nuestro array de roles cargados
+  const rolEncontrado = this.roles.find(r => r.rol_id === Number(rolId));
+  
+  if (rolEncontrado && ROL_SCOPE[rolEncontrado.nombre]) {
+    return ROL_SCOPE[rolEncontrado.nombre];
+  }
+  
+  return 'Sin descripción de alcance definida.';
+}
+
+
+/* ════════════════════════════════════════════════════════
+   CRUD EMPLEADOS
+   Modelo: nombre_completo, identificacion, email, rol
+════════════════════════════════════════════════════════ */
+
+openModalEmpleado(): void {
+
+  this.empleadoEditando = null;
+  this.formError = '';
+  this.formSuccess = '';
+
+  this.fotoCapturada = false;
+  this.fotoBase64 = '';
+
+  this.webcamActiva = false;
+  this.camaraCaptura = '';
+  this.streamCapturaError = false;
+
+  this.formEmpleado = {
+    nombre_completo: '',
+    identificacion: '',
+    email: '',
+    rol: ''
+  };
+
+  this.modalEmpleadoOpen = true;
+}
+
+
+editarEmpleado(emp: Empleado): void {
+
+  this.empleadoEditando = emp;
+
+  this.formError = '';
+  this.formSuccess = '';
+
+  this.fotoCapturada = false;
+  this.fotoBase64 = '';
+
+  this.webcamActiva = false;
+  this.camaraCaptura = '';
+  this.streamCapturaError = false;
+
+  this.formEmpleado = {
+    nombre_completo: emp.nombre_completo,
+    identificacion: emp.identificacion,
+    email: emp.email ?? '',
+    rol: emp.rol?.rol_id ?? ''
+  };
+
+  this.modalEmpleadoOpen = true;
+}
+
+
+cerrarModalEmpleado(): void {
+
+  this.detenerStreamLocal();
+
+  this.modalEmpleadoOpen = false;
+
+}
+
+
+/* ════════════════════════════════════════════════════════
+   GUARDAR EMPLEADO
+════════════════════════════════════════════════════════ */
+
+guardarEmpleado(): void {
+  // 1. Validaciones de presencia de datos
+  if (!this.formEmpleado.nombre_completo?.trim()) {
+    this.formError = 'Nombre obligatorio.';
+    return;
   }
 
-  editarEmpleado(emp: Empleado): void {
-    this.empleadoEditando = emp; this.formError = ''; this.formSuccess = '';
-    this.fotoCapturada = false; this.fotoBase64 = ''; this.webcamActiva = false;
-    this.camaraCaptura = ''; this.streamCapturaError = false;
-    this.formEmpleado = {
-      nombre_completo: emp.nombre_completo,
-      identificacion:  emp.identificacion,
-      email:           emp.email ?? '',
-      rol:             emp.rol?.rol_id ?? '',
-    };
-    this.modalEmpleadoOpen = true;
+  if (!this.formEmpleado.identificacion?.trim()) {
+    this.formError = 'Identificación obligatoria.';
+    return;
   }
 
-  cerrarModalEmpleado(): void {
-    this.detenerStreamLocal();
-    this.modalEmpleadoOpen = false;
+  if (!this.formEmpleado.rol) {
+    this.formError = 'Seleccione un rol.';
+    return;
   }
 
-  guardarEmpleado(): void {
-    if (!this.formEmpleado.nombre_completo.trim()) { this.formError='Nombre obligatorio.'; return; }
-    if (!this.formEmpleado.identificacion.trim())  { this.formError='Identificación obligatoria.'; return; }
-    if (!this.formEmpleado.rol)                    { this.formError='Seleccione un rol.'; return; }
-    if (!this.empleadoEditando && !this.fotoBase64){ this.formError='Capture una foto biométrica.'; return; }
+  // 2. Validación de biometría (Solo obligatoria si es un registro nuevo)
+  if (!this.empleadoEditando && !this.fotoBase64) {
+    this.formError = 'Capture una foto biométrica para generar el vector.';
+    return;
+  }
 
-    this.isSaving = true; this.formError = '';
+  this.isSaving = true;
+  this.formError = '';
+  this.formSuccess = '';
 
-    const payload: any = {
-      nombre_completo: this.formEmpleado.nombre_completo.trim(),
-      identificacion:  this.formEmpleado.identificacion.trim(),
-      email:           this.formEmpleado.email?.trim() || null,
-      rol:             Number(this.formEmpleado.rol),
-    };
+  // 3. Construcción del Payload siguiendo el contrato del Firmware
+  const payload: any = {
+    nombre_completo: this.formEmpleado.nombre_completo.trim(),
+    identificacion: this.formEmpleado.identificacion.trim(),
+    email: this.formEmpleado.email?.trim() || null,
+    rol: Number(this.formEmpleado.rol) 
+  };
 
-    // El backend (UsuarioViewSet.create) espera 'foto_registro' para
-    // extraer el face_embedding con face_recognition.
-    if (this.fotoBase64) payload['foto_registro'] = this.fotoBase64;
+  // Se añade la foto si existe (necesaria para enrolamiento inicial o actualización de rostro)
+  if (this.fotoBase64) {
+    payload['foto_registro'] = this.fotoBase64;
+  }
 
-    const req = this.empleadoEditando
-      ? this.http.put<Empleado>(`${this.BASE}/users/empleados/${this.empleadoEditando.usuario_id}/`, payload)
-      : this.http.post<Empleado>(`${this.BASE}/users/empleados/`, payload);
+  /**
+   * FLUJO UNIFICADO CON FIRMWARE:
+   * - Si es nuevo: POST a /access/registrar-empleado/ (Dispara Dlib/ResNet)
+   * - Si es edición: PUT a /users/empleados/ID/ (CRUD estándar)
+   */
+  const url = this.empleadoEditando
+    ? `${this.BASE}/users/empleados/${this.empleadoEditando.usuario_id}/`
+    : `${this.BASE}/access/registrar-empleado/`;
 
-    req.subscribe({
-      next: () => {
-        this.formSuccess = this.empleadoEditando ? '✓ Empleado actualizado.' : '✓ Empleado registrado con biometría.';
-        this.isSaving = false; this.loadAll();
-        setTimeout(() => this.cerrarModalEmpleado(), 1500);
+  const request = this.empleadoEditando 
+    ? this.http.put(url, payload) 
+    : this.http.post(url, payload);
+
+  request.subscribe({
+    next: (res: any) => {
+      this.isSaving = false;
+      this.formSuccess = this.empleadoEditando 
+        ? '✓ Datos actualizados correctamente' 
+        : '✓ Enrolamiento exitoso: Identidad biométrica generada';
+      
+      // Limpiamos la captura actual
+      this.fotoBase64 = '';
+      this.fotoCapturada = false;
+
+      // Recarga la lista para ver el estado "ENROLLADO" inmediatamente
+      this.loadAll(); 
+      
+      setTimeout(() => this.cerrarModalEmpleado(), 1500);
+    },
+    error: (err) => {
+      this.isSaving = false;
+      /**
+       * Captura de errores de lógica IA del backend:
+       * "No se detectó rostro", "Imagen borrosa", "Identificación duplicada", etc.
+       */
+      this.formError = err.error?.error || err.error?.mensaje || 'Error en el procesamiento biométrico.';
+      console.error('KinelaID Error:', err);
+    }
+  });
+}
+
+
+
+
+/* ════════════════════════════════════════════════════════
+   ELIMINAR EMPLEADO
+════════════════════════════════════════════════════════ */
+
+confirmarEliminar(emp: Empleado): void {
+
+  this.empleadoAEliminar = emp;
+  this.modalEliminarOpen = true;
+
+}
+
+cancelarEliminar(): void {
+
+  this.empleadoAEliminar = null;
+  this.modalEliminarOpen = false;
+
+}
+
+
+eliminarEmpleado(): void {
+
+  if (!this.empleadoAEliminar) return;
+
+  this.isSaving = true;
+
+  this.http.delete(
+    `${this.BASE}/users/empleados/${this.empleadoAEliminar.usuario_id}/`
+  ).subscribe({
+
+    next: () => {
+
+      this.isSaving = false;
+      this.modalEliminarOpen = false;
+      this.empleadoAEliminar = null;
+
+      this.loadAll();
+
+    },
+
+    error: () => {
+
+      this.isSaving = false;
+      this.modalEliminarOpen = false;
+
+    }
+
+  });
+
+}
+
+
+/* ════════════════════════════════════════════════════════
+   CAPTURA BIOMÉTRICA
+   lógica unificada (stream → snapshot → webcam fallback)
+════════════════════════════════════════════════════════ */
+
+
+/* Usuario cambia cámara */
+onCamaraCapturaChange(): void {
+
+  this.fotoCapturada = false;
+  this.fotoBase64 = '';
+
+  this.streamCapturaError = false;
+
+  this.cdr.detectChanges();
+
+}
+
+
+/* Método principal de captura */
+async capturarFrame(): Promise<void> {
+
+  this.formError = '';
+
+  if (this.camaraCaptura) {
+
+    await this.capturarViaSnapshot();
+
+  } else {
+
+    this.capturarDesdeLocal();
+
+  }
+
+}
+
+
+/* ════════════════════════════════════════════════════════
+   CAPTURA VIA SNAPSHOT (sin canvas tainted)
+════════════════════════════════════════════════════════ */
+
+private async capturarViaSnapshot(): Promise<void> {
+
+  const url = `${this.BASE}/cameras/capture/${this.camaraCaptura}/`;
+
+  try {
+
+    const res = await fetch(url, { mode: 'cors' });
+
+    if (!res.ok) {
+
+      throw new Error(`Snapshot error ${res.status}`);
+
+    }
+
+    const blob = await res.blob();
+
+    const base64 = await this.blobToBase64(blob);
+
+    this.fotoBase64 = base64;
+
+    this.fotoCapturada = true;
+
+    this.cdr.detectChanges();
+
+  }
+
+  catch (err) {
+
+    console.warn('[KinelaID] Snapshot falló → fallback webcam', err);
+
+    this.streamCapturaError = true;
+
+    await this.iniciarWebcam();
+
+  }
+
+}
+
+
+/* Convertir blob → base64 */
+private blobToBase64(blob: Blob): Promise<string> {
+
+  return new Promise((resolve, reject) => {
+
+    const reader = new FileReader();
+
+    reader.onloadend = () => resolve(reader.result as string);
+
+    reader.onerror = reject;
+
+    reader.readAsDataURL(blob);
+
+  });
+
+}
+
+
+/* ════════════════════════════════════════════════════════
+   WEBCAM LOCAL (fallback)
+════════════════════════════════════════════════════════ */
+
+async iniciarWebcam(): Promise<void> {
+
+  this.formError = '';
+
+  try {
+
+    this.localStream = await navigator.mediaDevices.getUserMedia({
+
+      video: {
+        width: { ideal: 640 },
+        height: { ideal: 480 },
+        facingMode: 'user'
       },
-      error: (err) => { this.formError = this.parseApiError(err); this.isSaving = false; }
+
+      audio: false
+
     });
+
+    await new Promise(r => setTimeout(r, 120));
+
+    const v = this.videoRef?.nativeElement;
+
+    if (!v) {
+
+      this.formError = 'Elemento de video no disponible.';
+      return;
+
+    }
+
+    v.srcObject = this.localStream;
+
+    await v.play();
+
+    this.webcamActiva = true;
+
+    this.cdr.detectChanges();
+
   }
 
-  confirmarEliminar(emp: Empleado): void  { this.empleadoAEliminar = emp; this.modalEliminarOpen = true; }
-  cancelarEliminar(): void                { this.empleadoAEliminar = null; this.modalEliminarOpen = false; }
+  catch (err: any) {
 
-  eliminarEmpleado(): void {
-    if (!this.empleadoAEliminar) return;
-    this.isSaving = true;
-    this.http.delete(`${this.BASE}/users/empleados/${this.empleadoAEliminar.usuario_id}/`).subscribe({
-      next: () => { this.isSaving = false; this.modalEliminarOpen = false; this.empleadoAEliminar = null; this.loadAll(); },
-      error: () => { this.isSaving = false; this.modalEliminarOpen = false; }
-    });
+    this.formError = err?.name === 'NotAllowedError'
+      ? 'Permisos de cámara denegados.'
+      : `Error cámara: ${err?.message || err}`;
+
+    this.cdr.detectChanges();
+
   }
+
+}
+
+
+/* Captura desde webcam */
+private capturarDesdeLocal(): void {
+
+  const video = this.videoRef?.nativeElement;
+  const canvas = this.canvasRef?.nativeElement;
+
+  if (!video || !canvas || video.videoWidth === 0) {
+
+    this.formError = 'La cámara aún no está lista.';
+    return;
+
+  }
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) return;
+
+  ctx.save();
+
+  ctx.scale(-1, 1);
+
+  ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+
+  ctx.restore();
+
+  this.fotoBase64 = canvas.toDataURL('image/jpeg', 0.92);
+
+  this.fotoCapturada = true;
+
+  this.detenerStreamLocal();
+
+  this.cdr.detectChanges();
+
+}
+
+
+/* repetir captura */
+async repetirCaptura(): Promise<void> {
+
+  this.fotoCapturada = false;
+  this.fotoBase64 = '';
+
+  const canvas = this.canvasRef?.nativeElement;
+
+  if (canvas) {
+
+    canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
+
+  }
+
+  if (this.camaraCaptura) {
+
+    return;
+
+  }
+
+  await this.iniciarWebcam();
+
+}
+
+
+/* detener webcam */
+detenerWebcam(): void {
+
+  this.detenerStreamLocal();
+
+  this.webcamActiva = false;
+
+  this.cdr.detectChanges();
+
+}
+
+
+private detenerStreamLocal(): void {
+
+  this.localStream?.getTracks().forEach(t => t.stop());
+
+  this.localStream = null;
+
+  this.webcamActiva = false;
+
+}
+
 
   /* ════════════════════════════════════════════════════════
      CRUD ÁREAS
@@ -1097,124 +1513,6 @@ export class Dashboard implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  /* ════════════════════════════════════════════════════════
-     CAPTURA BIOMÉTRICA — MODAL EMPLEADO
-     
-     PRIORIDAD:
-     1. Si hay cámara seleccionada (camaraCaptura != '') →
-        Usa el stream M-JPEG de camera_hub.
-        capturarDesdeStream() dibuja el <img> en canvas con drawImage().
-        NOTA: Requiere que el backend sirva CORS headers o sea same-origin.
-     
-     2. Si no hay cámara (camaraCaptura === '') →
-        Fallback a getUserMedia (cámara local del navegador).
-  ════════════════════════════════════════════════════════ */
-
-  /** Cuando el usuario cambia el selector de cámara */
-  onCamaraCapturaChange(): void {
-    this.fotoCapturada  = false;
-    this.fotoBase64     = '';
-    this.streamCapturaError = false;
-    // Si se deselecciona la cámara y hay stream local activo, lo mantiene
-    this.cdr.detectChanges();
-  }
-
-  /**
-   * Captura un frame desde el stream M-JPEG.
-   * Usa drawImage() del <img #streamPreview> en el canvas.
-   * Funciona mientras el browser tenga cargado el frame actual.
-   */
-  capturarDesdeStream(): void {
-    const imgEl  = this.streamPreviewRef?.nativeElement;
-    const canvas = this.canvasRef?.nativeElement;
-    if (!imgEl || !canvas) { this.formError = 'Error: referencia al stream no disponible.'; return; }
-
-    canvas.width  = imgEl.naturalWidth  || 640;
-    canvas.height = imgEl.naturalHeight || 480;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    try {
-      ctx.drawImage(imgEl, 0, 0, canvas.width, canvas.height);
-      this.fotoBase64    = canvas.toDataURL('image/jpeg', 0.92);
-      this.fotoCapturada = true;
-      this.cdr.detectChanges();
-    } catch (err) {
-      // Si hay error de CORS, el canvas queda "tainted" y toDataURL() lanza SecurityError
-      this.formError = 'Error de captura. Asegúrate de que el backend tenga CORS habilitado para el stream.';
-      console.error('Canvas tainted:', err);
-    }
-  }
-
-  /** Descarta el frame capturado desde el stream y permite repetir */
-  repetirCapturaStream(): void {
-    this.fotoCapturada  = false;
-    this.fotoBase64     = '';
-    this.streamCapturaError = false;
-    const canvas = this.canvasRef?.nativeElement;
-    if (canvas) canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
-    this.cdr.detectChanges();
-  }
-
-  /* ── Cámara local (getUserMedia) — fallback ── */
-
-  async iniciarWebcam(): Promise<void> {
-    this.formError = '';
-    try {
-      this.localStream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480, facingMode: 'user' },
-        audio: false,
-      });
-      await new Promise(r => setTimeout(r, 100));
-      const v = this.videoRef?.nativeElement;
-      if (!v) { this.formError = 'Error: elemento de video no disponible.'; return; }
-      v.srcObject = this.localStream;
-      await v.play();
-      this.webcamActiva = true;
-      this.cdr.detectChanges();
-    } catch (err: any) {
-      this.formError = err?.name === 'NotAllowedError'
-        ? 'Sin permisos de cámara. Habilítalos en el navegador.'
-        : `Error de cámara: ${err?.message||err}`;
-      this.cdr.detectChanges();
-    }
-  }
-
-  /** Captura frame del video local con espejo horizontal */
-  capturarFoto(): void {
-    const v = this.videoRef?.nativeElement;
-    const c = this.canvasRef?.nativeElement;
-    if (!v || !c) return;
-
-    c.width  = v.videoWidth  || 640;
-    c.height = v.videoHeight || 480;
-
-    const ctx = c.getContext('2d');
-    if (!ctx) return;
-
-    // Espejo horizontal para selfie natural
-    ctx.save(); ctx.scale(-1, 1); ctx.drawImage(v, -c.width, 0, c.width, c.height); ctx.restore();
-
-    this.fotoBase64    = c.toDataURL('image/jpeg', 0.92);
-    this.fotoCapturada = true;
-    this.detenerStreamLocal();
-    this.cdr.detectChanges();
-  }
-
-  async repetirCaptura(): Promise<void> {
-    this.fotoCapturada = false; this.fotoBase64 = '';
-    this.canvasRef?.nativeElement?.getContext('2d')?.clearRect(0, 0, 9999, 9999);
-    await this.iniciarWebcam();
-  }
-
-  detenerWebcam(): void { this.detenerStreamLocal(); this.webcamActiva = false; this.cdr.detectChanges(); }
-
-  private detenerStreamLocal(): void {
-    this.localStream?.getTracks().forEach(t => t.stop());
-    this.localStream = null;
-    this.webcamActiva = false;
-  }
 
   /* ════════════════════════════════════════════════════════
      REPORTES
@@ -1324,9 +1622,10 @@ export class Dashboard implements OnInit, AfterViewInit, OnDestroy {
 
   logout(): void {
     this.authService.logout();
-    gsap.to('.db-shell', {
+    const root = this.elRef.nativeElement.shadowRoot ?? this.elRef.nativeElement;
+    gsap.to(root.querySelector('.db-shell'), {
       opacity: 0, y: -10, duration: 0.4, ease: 'power2.in',
-      onComplete: () => {this.router.navigate(['/login'])}
+      onComplete: () => { this.router.navigate(['/login']); }
     });
   }
 

@@ -1,29 +1,12 @@
 /**
- * login.component.ts — KinelaID Auth v2.1
+ * login.component.ts — KinelaID Auth v3
  * ============================================================
- *
- * BUGS CORREGIDOS EN ESTA VERSIÓN:
- *
- *  1. SecurityError "Tainted canvas":
- *     El <img> que apunta a un stream cross-origin (8000 → 4200)
- *     contamina el canvas aunque CORS esté configurado, porque
- *     M-JPEG es un stream multipart y el browser lo trata de forma
- *     especial. No se puede hacer toDataURL() sobre él.
- *
- *     SOLUCIÓN: Se separan dos responsabilidades:
- *       - <img>: SOLO previsualización visual del stream.
- *       - Captura real: fetch() a /api/cameras/capture/{hw_index}/
- *         que devuelve un JPEG puro → se convierte a base64 con
- *         FileReader (sin canvas, sin taint de origen cruzado).
- *
- *  2. /stream/undefined/:
- *     La interfaz Camara tenía `camara_id` pero el modelo real
- *     tiene `id` (PK) y `hardware_index` (índice USB).
- *
- *  3. NG0955 Duplicated keys:
- *     El @for usaba `track cam.camara_id` que era undefined
- *     para todos → todas las keys colisionaban en "".
- *     Corregido a `track cam.id`.
+ * Funcionalidad 100% compatible con v2.1.
+ * Añadidos:
+ *   - Cursor personalizado (.lg-cursor + .lg-cursor-ring)
+ *   - Animación de entrada con scan line (igual que home)
+ *   - Stagger de entrada de campos
+ *   - Shake en error mejorado (eje Y + escala)
  * ============================================================
  */
 
@@ -41,12 +24,12 @@ import { of }            from 'rxjs';
 import { gsap }          from 'gsap';
 
 /**
- * Interfaz alineada al modelo real camera_hub/models.py
- * y serializer (campos que devuelve el API):
+ * Interfaz alineada al modelo real camera_hub/models.py.
+ * Campos reales del serializer:
  *   id             → PK AutoField
  *   nombre         → CharField
  *   hardware_index → IntegerField (índice USB: 0, 1, 2…)
- *   nombre_area    → CharField read_only (serializer)
+ *   nombre_area    → CharField read_only
  *   is_activa      → BooleanField
  *   stream_url     → propiedad: "/api/cameras/stream/{hardware_index}/"
  */
@@ -68,7 +51,6 @@ interface Camara {
 })
 export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
 
-  @ViewChild('loginCard')     loginCard!:  ElementRef;
   @ViewChild('streamImg')     streamImg!:  ElementRef<HTMLImageElement>;
   @ViewChild('videoLocal')    videoLocal!: ElementRef<HTMLVideoElement>;
   @ViewChild('canvasCaptura') canvasRef!:  ElementRef<HTMLCanvasElement>;
@@ -83,19 +65,11 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   /* ── camera_hub ── */
   private readonly API  = 'http://127.0.0.1:8000/api';
   camaras:       Camara[] = [];
-  selectedCamId: number   = -1;   // id (PK) de la cámara activa en el selector
+  selectedCamId: number   = -1;
 
-  /** URL absoluta del stream M-JPEG — solo para el <img> de preview */
   streamPreviewUrl: string | null = null;
-
-  /** El <img> de preview emitió (error) — stream no disponible */
   streamError = false;
 
-  /**
-   * Modo de captura activo:
-   *   'stream' → preview con <img>, captura via fetch snapshot endpoint
-   *   'local'  → getUserMedia directo (fallback)
-   */
   modoCaptura: 'stream' | 'local' = 'stream';
 
   fotoCapturada = false;
@@ -103,6 +77,10 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   capturando    = false;
 
   private localStream: MediaStream | null = null;
+
+  /* ── Cursor ── */
+  private cursorDot!:  HTMLElement;
+  private cursorRing!: HTMLElement;
 
   constructor(
     private auth:   AuthService,
@@ -119,7 +97,6 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     this.http.get<Camara[]>(`${this.API}/cameras/`)
       .pipe(catchError(() => of([])))
       .subscribe((cams: Camara[]) => {
-        // Solo cámaras marcadas como activas
         this.camaras = cams.filter(c => c.is_activa);
         if (this.camaras.length > 0) {
           this.selectedCamId = this.camaras[0].id;
@@ -129,13 +106,136 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    gsap.from(this.loginCard.nativeElement, {
-      duration: 1, y: 30, opacity: 0, ease: 'power4.out', delay: 0.2,
-    });
+    this.initCursor();
+    this.runIntro();
   }
 
   ngOnDestroy(): void {
     this.detenerCamaraLocal();
+    window.removeEventListener('mousemove', this.onCursorMove);
+    document.removeEventListener('mouseleave', this.onMouseLeave);
+    document.removeEventListener('mouseenter', this.onMouseEnter);
+  }
+
+  /* ════════════════════════════════════════════════════
+     CURSOR
+  ════════════════════════════════════════════════════ */
+
+  private initCursor(): void {
+    this.cursorDot  = document.querySelector('.lg-cursor')      as HTMLElement;
+    this.cursorRing = document.querySelector('.lg-cursor-ring') as HTMLElement;
+
+    if (!this.cursorDot || !this.cursorRing) return;
+
+    gsap.set([this.cursorDot, this.cursorRing], { opacity: 0 });
+
+    window.addEventListener('mousemove', this.onCursorMove);
+    document.addEventListener('mouseleave', this.onMouseLeave);
+    document.addEventListener('mouseenter', this.onMouseEnter);
+
+    // Hover en interactables
+    setTimeout(() => {
+      const interactables = document.querySelectorAll(
+        'button, input, select, .lg-tech-tag'
+      );
+
+      interactables.forEach(el => {
+        el.addEventListener('mouseenter', () => {
+          gsap.to(this.cursorRing, { scale: 2, borderColor: 'rgba(0, 240, 255, 0.9)', duration: 0.3 });
+          gsap.to(this.cursorDot,  { scale: 0.4, duration: 0.2 });
+        });
+        el.addEventListener('mouseleave', () => {
+          gsap.to(this.cursorRing, { scale: 1, borderColor: 'rgba(0, 240, 255, 0.45)', duration: 0.35 });
+          gsap.to(this.cursorDot,  { scale: 1, duration: 0.2 });
+        });
+      });
+    }, 300);
+  }
+
+  private onCursorMove = (e: MouseEvent): void => {
+    if (!this.cursorDot) return;
+    gsap.to(this.cursorDot,  { x: e.clientX, y: e.clientY, duration: 0.02 });
+    gsap.to(this.cursorRing, { x: e.clientX, y: e.clientY, duration: 0.12, ease: 'power2.out' });
+    gsap.to([this.cursorDot, this.cursorRing], { opacity: 1, duration: 0.25, overwrite: 'auto' });
+  };
+
+  private onMouseLeave = (): void => {
+    gsap.to([this.cursorDot, this.cursorRing], { opacity: 0, duration: 0.3 });
+  };
+
+  private onMouseEnter = (): void => {
+    gsap.to([this.cursorDot, this.cursorRing], { opacity: 1, duration: 0.3 });
+  };
+
+  /* ════════════════════════════════════════════════════
+     INTRO ANIMATION — scan line → stagger de elementos
+  ════════════════════════════════════════════════════ */
+
+  private runIntro(): void {
+    // 1. Scan line horizontal
+    const scanLine = document.createElement('div');
+    scanLine.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 0;
+      width: 100vw;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #00f0ff, transparent);
+      box-shadow: 0 0 14px rgba(0, 240, 255, 0.8);
+      z-index: 9990;
+      pointer-events: none;
+      transform-origin: left center;
+    `;
+    document.body.appendChild(scanLine);
+
+    const tl = gsap.timeline({
+      onComplete: () => {
+        gsap.to(scanLine, { opacity: 0, duration: 0.25, onComplete: () => scanLine.remove() });
+      }
+    });
+
+    // Scan line barre
+    tl.fromTo(scanLine,
+      { scaleX: 0, opacity: 0 },
+      { scaleX: 1, opacity: 0.85, duration: 0.5, ease: 'power2.inOut' }
+    )
+    .to(scanLine, { opacity: 0, duration: 0.2 })
+
+    // Panel de estado
+    .from('.lg-status-panel', {
+      x: -30, opacity: 0, duration: 0.6, ease: 'power3.out'
+    }, '-=0.1')
+
+    // Barra de título del terminal
+    .from('.lg-terminal-bar', {
+      y: -14, opacity: 0, duration: 0.5, ease: 'power2.out'
+    }, '-=0.45')
+
+    // Header del paso
+    .from('.lg-step-header', {
+      y: 18, opacity: 0, duration: 0.55, ease: 'power3.out'
+    }, '-=0.4')
+
+    // Campos con stagger
+    .from('.lg-field', {
+      y: 16, opacity: 0, stagger: 0.1, duration: 0.45, ease: 'power2.out'
+    }, '-=0.38')
+
+    // Botón
+    .from('.lg-btn-primary', {
+      y: 12, opacity: 0, duration: 0.4, ease: 'power2.out'
+    }, '-=0.3')
+
+    // Footer
+    .from('.lg-step-footer', {
+      opacity: 0, duration: 0.4
+    }, '-=0.25')
+
+    // Esquinas del viewport
+    .from('.lg-corner', {
+      scale: 0.4, opacity: 0, stagger: 0.06, duration: 0.4,
+      transformOrigin: 'center center', ease: 'back.out(2)'
+    }, '-=0.35');
   }
 
   /* ════════════════════════════════════════════════════
@@ -145,6 +245,7 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   onSubmit(): void {
     if (!this.credentials.username || !this.credentials.password) {
       this.errorMessage = 'Completa todos los campos.';
+      this.shakeForm();
       return;
     }
     this.isLoading    = true;
@@ -162,9 +263,18 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
       error: (err) => {
         this.errorMessage = err.error?.error || 'Credenciales inválidas.';
         this.isLoading    = false;
-        gsap.to(this.loginCard.nativeElement, { x: 10, duration: 0.08, repeat: 4, yoyo: true });
+        this.shakeForm();
       },
     });
+  }
+
+  private shakeForm(): void {
+    const form = document.querySelector('.lg-step--creds');
+    if (!form) return;
+    gsap.fromTo(form,
+      { x: 0 },
+      { x: 10, duration: 0.07, repeat: 5, yoyo: true, ease: 'none' }
+    );
   }
 
   /* ════════════════════════════════════════════════════
@@ -172,22 +282,33 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   ════════════════════════════════════════════════════ */
 
   private irABiometrico(): void {
-    gsap.to('.form-content', {
-      opacity: 0, x: -20, duration: 0.3,
+    const currentStep = document.querySelector('.lg-step--creds');
+
+    gsap.to(currentStep, {
+      opacity: 0,
+      x: -28,
+      duration: 0.35,
+      ease: 'power2.in',
       onComplete: () => {
         this.step      = 'BIOMETRIC';
         this.isLoading = false;
         this.cdr.detectChanges();
 
-        gsap.from('.biometric-content', {
-          opacity: 0, x: 20, duration: 0.4,
-          onComplete: () => this.activarModoCaptura(),
-        });
+        const bioStep = document.querySelector('.lg-step--bio');
+        gsap.fromTo(bioStep,
+          { opacity: 0, x: 28 },
+          {
+            opacity: 1,
+            x: 0,
+            duration: 0.45,
+            ease: 'power3.out',
+            onComplete: () => this.activarModoCaptura()
+          }
+        );
       },
     });
   }
 
-  /** Activa el preview y determina la estrategia de captura */
   activarModoCaptura(): void {
     this.streamError   = false;
     this.fotoCapturada = false;
@@ -203,22 +324,18 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  /** Construye la URL absoluta del stream M-JPEG para el <img> de preview */
   buildPreviewUrl(camId: number): string {
     const cam = this.camaras.find(c => c.id === camId);
     if (!cam) return '';
-    // stream_url llega como "/api/cameras/stream/0/" (relativa)
     return `http://127.0.0.1:8000/api${cam.stream_url}`;
   }
 
-  /** hardware_index de la cámara actualmente seleccionada */
   get hwIdx(): number {
     return this.camaras.find(c => c.id === this.selectedCamId)?.hardware_index ?? 0;
   }
 
-  /** El usuario cambia de cámara en el selector */
   cambiarCamara(rawId: any): void {
-    const camId = Number(rawId);   // ngModel puede dar string desde <select>
+    const camId = Number(rawId);
     const cam   = this.camaras.find(c => c.id === camId);
     if (!cam) return;
 
@@ -230,30 +347,19 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  /** El <img> del stream emitió un error de red */
   onStreamError(): void {
     console.warn('[KinelaID] Stream preview no disponible.');
     this.streamError = true;
     this.cdr.detectChanges();
   }
 
-  /** Etiqueta legible para el <select> de cámaras */
   getCamLabel(cam: Camara): string {
     const area = cam.nombre_area ? ` · ${cam.nombre_area}` : '';
     return `${cam.nombre}${area} — idx:${cam.hardware_index}`;
   }
 
   /* ════════════════════════════════════════════════════
-     CAPTURA DEL FRAME (sin Tainted Canvas)
-     
-     Estrategia A (modoCaptura==='stream'):
-       fetch() al endpoint de snapshot /api/cameras/capture/{idx}/
-       → devuelve JPEG → FileReader.readAsDataURL() → base64
-       Sin canvas, sin cross-origin taint.
-     
-     Estrategia B (modoCaptura==='local' o si A falla):
-       <video> de getUserMedia → canvas.drawImage() → toDataURL()
-       Mismo origen → sin restricciones CORS.
+     CAPTURA (sin Tainted Canvas)
   ════════════════════════════════════════════════════ */
 
   async capturarFrame(): Promise<void> {
@@ -269,23 +375,6 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  /**
-   * Pide un frame estático al backend.
-   * Necesita el endpoint en camera_hub/views.py:
-   *
-   *   @api_view(['GET'])
-   *   def capture_frame(request, hw_idx):
-   *       cap = cv2.VideoCapture(int(hw_idx))
-   *       success, frame = cap.read()
-   *       cap.release()
-   *       if not success:
-   *           return HttpResponse(status=503)
-   *       _, buf = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
-   *       return HttpResponse(buf.tobytes(), content_type='image/jpeg')
-   *
-   *   # urls.py de camera_hub:
-   *   path('cameras/capture/<int:hw_idx>/', capture_frame),
-   */
   private async capturarViaSnapshot(): Promise<void> {
     const url = `${this.API}/cameras/capture/${this.hwIdx}/`;
 
@@ -293,7 +382,6 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
       const res = await fetch(url, { mode: 'cors' });
 
       if (!res.ok) {
-        // Endpoint no existe o cámara no disponible → fallback getUserMedia
         console.warn(`[KinelaID] /cameras/capture/ → ${res.status}. Fallback a cámara local.`);
         this.capturando  = false;
         this.modoCaptura = 'local';
@@ -302,7 +390,6 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
         return;
       }
 
-      // Convertir el blob JPEG a base64 SIN canvas → sin taint
       const blob   = await res.blob();
       const base64 = await this.blobToBase64(blob);
 
@@ -312,7 +399,6 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
       this.cdr.detectChanges();
 
     } catch (err) {
-      // Error de red (CORS no configurado, servidor apagado, etc.)
       console.warn('[KinelaID] fetch snapshot falló → fallback local:', err);
       this.capturando  = false;
       this.modoCaptura = 'local';
@@ -321,7 +407,6 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  /** FileReader: Blob → data URL base64. No usa canvas → sin CORS taint. */
   private blobToBase64(blob: Blob): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader     = new FileReader();
@@ -331,7 +416,6 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  /** Captura desde getUserMedia — mismo origen, canvas libre de taint */
   private capturarDesdeLocal(): void {
     const canvas = this.canvasRef?.nativeElement;
     const video  = this.videoLocal?.nativeElement;
@@ -348,7 +432,6 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Espejo horizontal para selfie natural
     ctx.save();
     ctx.scale(-1, 1);
     ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
@@ -359,7 +442,6 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  /** Descarta la foto y permite volver a capturar */
   repetirCaptura(): void {
     this.fotoCapturada = false;
     this.fotoBase64    = '';
@@ -369,7 +451,7 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /* ════════════════════════════════════════════════════
-     FALLBACK: CÁMARA LOCAL (getUserMedia)
+     FALLBACK: CÁMARA LOCAL
   ════════════════════════════════════════════════════ */
 
   async iniciarCamaraLocal(): Promise<void> {
@@ -406,7 +488,7 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   async captureAndVerify(): Promise<void> {
     if (!this.fotoCapturada) {
       await this.capturarFrame();
-      if (!this.fotoBase64) return;  // Captura falló, detenerse
+      if (!this.fotoBase64) return;
     }
 
     this.isLoading    = true;
@@ -432,7 +514,13 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
         this.isLoading     = false;
         this.fotoCapturada = false;
         this.fotoBase64    = '';
-        gsap.to(this.loginCard.nativeElement, { x: 8, duration: 0.08, repeat: 4, yoyo: true });
+
+        // Shake en el bio step
+        const bioStep = document.querySelector('.lg-step--bio');
+        gsap.fromTo(bioStep,
+          { x: 0 },
+          { x: 8, duration: 0.07, repeat: 5, yoyo: true, ease: 'none' }
+        );
       },
     });
   }
@@ -442,10 +530,20 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   ════════════════════════════════════════════════════ */
 
   private successTransition(): void {
-    gsap.to(this.loginCard.nativeElement, {
-      scale: 0.8, opacity: 0, duration: 0.5, ease: 'expo.in',
-      onComplete: () => {this.router.navigate(['/dashboard'])},
-    });
+    // Flash de confirmación + salida
+    gsap.timeline()
+      .to('.lg-terminal-body', {
+        opacity: 0,
+        scale: 1.02,
+        duration: 0.25,
+        ease: 'power2.in'
+      })
+      .to('.lg-shell', {
+        opacity: 0,
+        duration: 0.4,
+        ease: 'power2.in',
+        onComplete: () => {this.router.navigate(['/dashboard'])}
+      }, '-=0.1');
   }
 
   private detenerCamaraLocal(): void {

@@ -10,6 +10,7 @@ html, body {
   padding: 0;
   background: #020202;
   overflow-x: hidden;
+  cursor: none; /* Cursor personalizado activo */
 }
 
 /* Scan lines globales */
@@ -29,7 +30,132 @@ html, body {
 }
 
 /* ============================================================
-   NAV
+   CURSOR PERSONALIZADO
+   ============================================================ */
+
+.hm-cursor {
+  position: fixed;
+  width: 6px;
+  height: 6px;
+  background: #00f0ff;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 8px #00f0ff, 0 0 16px rgba(0, 240, 255, 0.4);
+  transition: opacity 0.2s;
+}
+
+.hm-cursor-ring {
+  position: fixed;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(0, 240, 255, 0.5);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9998;
+  transform: translate(-50%, -50%);
+  transition: border-color 0.2s;
+}
+
+/* ============================================================
+   HUD AMBIENT — LADO DERECHO
+   ============================================================ */
+
+.hm-hud {
+  position: fixed;
+  right: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.hm-hud-line {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(to bottom, transparent, rgba(0, 240, 255, 0.2), transparent);
+}
+
+.hm-hud-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.hm-hud-label {
+  font-size: 7px;
+  letter-spacing: 3px;
+  color: rgba(0, 240, 255, 0.25);
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+}
+
+.hm-hud-val {
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: rgba(0, 240, 255, 0.45);
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+}
+
+.hm-hud-val--on {
+  color: #00ff88;
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
+  animation: hm-blink 2.5s ease-in-out infinite;
+}
+
+.hm-hud-sep {
+  width: 24px;
+  height: 1px;
+  background: rgba(0, 240, 255, 0.1);
+  align-self: flex-end;
+}
+
+/* Barra de progreso vertical HUD */
+.hm-hud-track {
+  position: relative;
+  width: 2px;
+  height: 80px;
+  background: rgba(0, 240, 255, 0.06);
+  margin-top: 4px;
+  align-self: flex-end;
+  overflow: hidden;
+}
+
+.hm-hud-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 0%;
+  background: linear-gradient(to top, #00f0ff, rgba(0, 240, 255, 0.2));
+  transition: height 0.1s ease;
+  box-shadow: 0 0 6px rgba(0, 240, 255, 0.4);
+}
+
+@media (max-width: 1024px) {
+  .hm-hud { display: none; }
+}
+
+/* ============================================================
+   OVERLAY BLUR CANVAS
+   ============================================================ */
+
+.hm-canvas-blur {
+  background: rgba(2, 2, 2, 0);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  transition: none; /* GSAP controla esto */
+}
+
+/* ============================================================
+   NAV (actualización con progress bar)
    ============================================================ */
 
 .hm-nav {
@@ -75,11 +201,30 @@ html, body {
 }
 
 .hm-nav-pip {
-  width: 6px; height: 6px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: #00ff88;
   box-shadow: 0 0 8px #00ff88;
   animation: hm-blink 2.5s ease-in-out infinite;
+}
+
+/* Barra de progreso de scroll en nav */
+.hm-nav-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: rgba(0, 240, 255, 0.05);
+}
+
+.hm-nav-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, transparent, #00f0ff, transparent);
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+  transition: width 0.05s linear;
 }
 
 @keyframes hm-blink {
@@ -95,7 +240,7 @@ html, body {
   font-size: 10px;
   letter-spacing: 4px;
   font-weight: 700;
-  cursor: pointer;
+  cursor: none;
   position: relative;
   overflow: hidden;
   transition: color 0.35s;
@@ -104,8 +249,10 @@ html, body {
 .hm-btn-login::before {
   content: '';
   position: absolute;
-  left: 0; top: 0;
-  height: 100%; width: 0;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 0;
   background: #00f0ff;
   transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 0;
@@ -123,7 +270,6 @@ html, body {
 
 .hm-hero-inner { position: relative; z-index: 2; }
 
-/* Eyebrow */
 .hm-hero-eyebrow {
   display: flex;
   align-items: center;
@@ -133,7 +279,8 @@ html, body {
 }
 
 .hm-ey-dot {
-  width: 5px; height: 5px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: #00f0ff;
   box-shadow: 0 0 10px #00f0ff;
@@ -147,7 +294,6 @@ html, body {
   font-weight: 700;
 }
 
-/* Título principal */
 .hm-hero-title {
   font-size: 12vw;
   font-weight: 900;
@@ -161,13 +307,11 @@ html, body {
   display: block;
 }
 
-/* Cada carácter animable */
 .hm-char {
   display: inline-block;
   will-change: transform, opacity;
 }
 
-/* Separador con diamante */
 .hm-separator {
   display: flex;
   align-items: center;
@@ -185,7 +329,8 @@ html, body {
 }
 
 .hm-sep-diamond {
-  width: 8px; height: 8px;
+  width: 8px;
+  height: 8px;
   background: #00f0ff;
   transform: rotate(45deg);
   box-shadow: 0 0 12px #00f0ff, 0 0 24px rgba(0, 240, 255, 0.4);
@@ -196,16 +341,56 @@ html, body {
   letter-spacing: 0.6em;
   text-transform: uppercase;
   font-size: clamp(10px, 1.8vw, 13px);
-  margin-bottom: 48px;
+  margin-bottom: 32px;
 }
 
-/* Indicador de scroll */
+/* Stats rápidas del hero */
+.hm-hero-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 40px;
+}
+
+.hm-hero-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0 28px;
+}
+
+.hm-hero-stat-n {
+  font-size: 22px;
+  font-weight: 900;
+  color: #00f0ff;
+  font-family: 'Courier New', monospace;
+  line-height: 1;
+  text-shadow: 0 0 16px rgba(0, 240, 255, 0.5);
+}
+
+.hm-hero-stat-n small { font-size: 11px; opacity: 0.5; }
+
+.hm-hero-stat-l {
+  font-size: 7px;
+  letter-spacing: 3px;
+  color: rgba(255, 255, 255, 0.2);
+  font-weight: 700;
+}
+
+.hm-hero-stat-sep {
+  width: 1px;
+  height: 28px;
+  background: rgba(0, 240, 255, 0.1);
+  flex-shrink: 0;
+}
+
 .hm-scroll-cue {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  margin-top: 16px;
 }
 
 .hm-scroll-label {
@@ -237,10 +422,10 @@ html, body {
   100% { transform: translateY(200%); opacity: 0; }
 }
 
-/* Esquinas del hero */
 .hm-hero-corner {
   position: absolute;
-  width: 24px; height: 24px;
+  width: 24px;
+  height: 24px;
   pointer-events: none;
   opacity: 0.3;
 }
@@ -251,7 +436,171 @@ html, body {
 .hm-hero-corner--br { bottom: 24px; right: 24px; border-bottom: 1px solid #00f0ff; border-right:  1px solid #00f0ff; }
 
 /* ============================================================
-   ABOUT SECTION (ancla scroll modelo 3D — mantener clase)
+   CHAPTER TAG — indicador de capítulo
+   ============================================================ */
+
+.hm-chapter-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 8px;
+  letter-spacing: 5px;
+  color: rgba(0, 240, 255, 0.35);
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.hm-chapter-tag span:first-child {
+  color: #00f0ff;
+  font-size: 11px;
+  opacity: 0.5;
+}
+
+.hm-chapter-tag--hero {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 0;
+}
+
+/* ============================================================
+   SECTION DIVIDERS — divisores de capítulo
+   ============================================================ */
+
+.hm-section-divider {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 40px;
+  height: 40px;
+  overflow: hidden;
+}
+
+.hm-divider-line {
+  flex: 1;
+  height: 1px;
+  background: rgba(0, 240, 255, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.hm-divider-particle {
+  position: absolute;
+  top: 0;
+  left: -20%;
+  width: 20%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.6), transparent);
+  animation: hm-divider-travel 3s linear infinite;
+}
+
+.hm-divider-particle--delay {
+  animation-delay: -1.5s;
+}
+
+@keyframes hm-divider-travel {
+  0%   { left: -20%; }
+  100% { left: 120%; }
+}
+
+.hm-divider-label {
+  font-size: 7px;
+  letter-spacing: 4px;
+  color: rgba(0, 240, 255, 0.18);
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   TERMINAL BLOCK (sección about)
+   ============================================================ */
+
+.hm-terminal {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 240, 255, 0.12);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.hm-terminal-bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  background: rgba(0, 240, 255, 0.04);
+  border-bottom: 1px solid rgba(0, 240, 255, 0.08);
+}
+
+.hm-terminal-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.hm-terminal-dot--red   { background: rgba(255, 90, 90, 0.7); }
+.hm-terminal-dot--amber { background: rgba(255, 184, 0, 0.7); }
+.hm-terminal-dot--green { background: rgba(0, 255, 136, 0.7); }
+
+.hm-terminal-title {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: rgba(0, 240, 255, 0.25);
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+.hm-terminal-body {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hm-terminal-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-family: 'Courier New', monospace;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.hm-terminal-line--out {
+  color: rgba(255, 255, 255, 0.3);
+  padding-left: 16px;
+}
+
+.hm-t-prompt {
+  color: #00f0ff;
+  font-weight: 700;
+}
+
+.hm-t-cmd {
+  color: rgba(0, 240, 255, 0.7);
+}
+
+.hm-t-ok {
+  color: #00ff88;
+  font-weight: 700;
+}
+
+.hm-terminal-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 13px;
+  background: #00f0ff;
+  margin-left: 4px;
+  vertical-align: middle;
+  animation: hm-blink 1.1s step-end infinite;
+}
+
+/* ============================================================
+   ABOUT SECTION
    ============================================================ */
 
 .hm-about-content {
@@ -275,6 +624,10 @@ html, body {
   line-height: 1.05;
   letter-spacing: -1px;
   margin: 8px 0 24px;
+}
+
+.hm-section-title--center {
+  text-align: center;
 }
 
 .hm-title-accent {
@@ -301,7 +654,6 @@ html, body {
   font-weight: 600;
 }
 
-/* Stats inline en el about */
 .hm-about-stats {
   display: flex;
   align-items: center;
@@ -343,8 +695,298 @@ html, body {
 }
 
 /* ============================================================
+   VIDEO SECTION
+   ============================================================ */
+
+.video-section {
+  overflow: hidden;
+}
+
+.hm-video-wrap {
+  width: 100%;
+  max-width: 960px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+}
+
+.hm-video-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hm-video-subtitle {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: rgba(0, 240, 255, 0.3);
+  font-weight: 700;
+  margin-top: 8px;
+}
+
+/* Player de video */
+.hm-player-wrap {
+  width: 100%;
+  max-width: 800px;
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  overflow: visible;
+}
+
+/* Video element */
+.hm-video-el {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Placeholder visual */
+.hm-video-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: rgba(0, 240, 255, 0.2);
+  font-size: 10px;
+  letter-spacing: 2px;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.hm-video-placeholder code {
+  font-size: 9px;
+  color: rgba(0, 240, 255, 0.35);
+  background: rgba(0, 240, 255, 0.05);
+  padding: 3px 8px;
+  border: 1px solid rgba(0, 240, 255, 0.1);
+}
+
+/* Ocultar placeholder si hay video cargado */
+.hm-player-wrap:has(.hm-video-el[src]) .hm-video-placeholder {
+  display: none;
+}
+
+/* Scan line del player */
+.hm-player-scan {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.6), transparent);
+  animation: hm-player-scan 4s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 3;
+}
+
+@keyframes hm-player-scan {
+  0%   { top: 0;    opacity: 0; }
+  5%   { opacity: 0.7; }
+  95%  { opacity: 0.4; }
+  100% { top: 100%; opacity: 0; }
+}
+
+/* HUD del player */
+.hm-player-hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent);
+  pointer-events: none;
+  z-index: 4;
+}
+
+.hm-player-hud-left,
+.hm-player-hud-right {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.hm-player-pip {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #00ff88;
+  box-shadow: 0 0 6px #00ff88;
+  animation: hm-blink 1.8s ease-in-out infinite;
+}
+
+.hm-player-hud-text {
+  font-size: 8px;
+  letter-spacing: 3px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+}
+
+/* Botón demo completa */
+.hm-btn-demo {
+  position: absolute;
+  bottom: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 24px;
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  color: #00f0ff;
+  font-size: 10px;
+  letter-spacing: 3px;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  cursor: none;
+  white-space: nowrap;
+  transition: all 0.3s;
+  z-index: 5;
+}
+
+.hm-btn-demo:hover {
+  background: rgba(0, 240, 255, 0.08);
+  border-color: #00f0ff;
+  box-shadow: 0 0 28px rgba(0, 240, 255, 0.25);
+}
+
+.hm-btn-demo-icon {
+  display: flex;
+  align-items: center;
+}
+
+.hm-btn-demo-arrow {
+  transition: transform 0.3s;
+}
+
+.hm-btn-demo:hover .hm-btn-demo-arrow {
+  transform: translateX(4px);
+}
+
+/* ── RETICLES (esquinas animadas) ── */
+/* Usados tanto en player como en modal */
+
+.hm-reticle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.hm-reticle--tl {
+  top:    -1px;
+  left:   -1px;
+  border-top:  2px solid rgba(0, 240, 255, 0.7);
+  border-left: 2px solid rgba(0, 240, 255, 0.7);
+  box-shadow: -4px -4px 10px rgba(0, 240, 255, 0.15);
+  animation: hm-reticle-tl 3s ease-in-out infinite;
+}
+
+.hm-reticle--tr {
+  top:    -1px;
+  right:  -1px;
+  border-top:   2px solid rgba(0, 240, 255, 0.7);
+  border-right: 2px solid rgba(0, 240, 255, 0.7);
+  box-shadow: 4px -4px 10px rgba(0, 240, 255, 0.15);
+  animation: hm-reticle-tr 3s ease-in-out infinite;
+}
+
+.hm-reticle--bl {
+  bottom: -1px;
+  left:   -1px;
+  border-bottom: 2px solid rgba(0, 240, 255, 0.7);
+  border-left:   2px solid rgba(0, 240, 255, 0.7);
+  box-shadow: -4px 4px 10px rgba(0, 240, 255, 0.15);
+  animation: hm-reticle-bl 3s ease-in-out infinite;
+}
+
+.hm-reticle--br {
+  bottom: -1px;
+  right:  -1px;
+  border-bottom: 2px solid rgba(0, 240, 255, 0.7);
+  border-right:  2px solid rgba(0, 240, 255, 0.7);
+  box-shadow: 4px 4px 10px rgba(0, 240, 255, 0.15);
+  animation: hm-reticle-br 3s ease-in-out infinite;
+}
+
+@keyframes hm-reticle-tl {
+  0%, 100% { top: -1px; left: -1px; opacity: 0.7; }
+  50%       { top: -3px; left: -3px; opacity: 1; }
+}
+@keyframes hm-reticle-tr {
+  0%, 100% { top: -1px; right: -1px; opacity: 0.7; }
+  50%       { top: -3px; right: -3px; opacity: 1; }
+}
+@keyframes hm-reticle-bl {
+  0%, 100% { bottom: -1px; left: -1px; opacity: 0.7; }
+  50%       { bottom: -3px; left: -3px; opacity: 1; }
+}
+@keyframes hm-reticle-br {
+  0%, 100% { bottom: -1px; right: -1px; opacity: 0.7; }
+  50%       { bottom: -3px; right: -3px; opacity: 1; }
+}
+
+/* Feature chips */
+.hm-video-features {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 28px;
+}
+
+.hm-vf-chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  border: 1px solid rgba(0, 240, 255, 0.12);
+  background: rgba(0, 240, 255, 0.025);
+  color: rgba(0, 240, 255, 0.45);
+  font-size: 9px;
+  letter-spacing: 2px;
+  font-weight: 700;
+  transition: all 0.25s;
+}
+
+.hm-vf-chip:hover {
+  border-color: rgba(0, 240, 255, 0.3);
+  color: #00f0ff;
+  background: rgba(0, 240, 255, 0.06);
+}
+
+/* ============================================================
+   DATA PARTICLES (floating hex/code lines)
+   ============================================================ */
+
+.hm-data-particle {
+  position: absolute;
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: rgba(0, 240, 255, 0.55);
+  pointer-events: none;
+  white-space: nowrap;
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+}
+
+/* ============================================================
    IDENTITY / HISTORIA SECTION
-   (reemplaza las 3 cards simples — ancla salida del modelo)
    ============================================================ */
 
 .hm-identity-section {
@@ -365,7 +1007,7 @@ html, body {
   align-items: start;
 }
 
-/* ── Columna izquierda: Manifiesto ── */
+/* ── Manifesto ── */
 .hm-manifesto {
   display: flex;
   flex-direction: column;
@@ -384,11 +1026,12 @@ html, body {
 .hm-manifesto-card::before {
   content: '';
   position: absolute;
-  top: -1px; left: 0;
-  width: 100%; height: 1px;
+  top: -1px;
+  left: 0;
+  width: 100%;
+  height: 1px;
   background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.5), transparent);
   opacity: 0;
-  transition: none;
 }
 
 .hm-manifesto-card:hover { border-color: rgba(0, 240, 255, 0.3); background: rgba(0, 240, 255, 0.05); }
@@ -468,19 +1111,18 @@ html, body {
   box-shadow: 0 0 10px rgba(0, 240, 255, 0.18);
 }
 
-/* ── Columna derecha: Timeline ── */
+/* ── Timeline con iconos ── */
 .hm-timeline {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding-left: 28px;
+  padding-left: 44px;
 }
 
-/* Línea vertical de la timeline */
 .hm-timeline-track {
   position: absolute;
-  left: 6px;
+  left: 15px;
   top: 8px;
   bottom: 8px;
   width: 1px;
@@ -494,7 +1136,7 @@ html, body {
 
 .hm-timeline-item {
   position: relative;
-  padding: 0 0 32px 0;
+  padding: 0 0 36px 0;
   display: flex;
   gap: 20px;
   align-items: flex-start;
@@ -502,39 +1144,51 @@ html, body {
 
 .hm-timeline-item:last-child { padding-bottom: 0; }
 
-/* Dot de la timeline */
-.hm-tl-dot {
+/* Icono de la timeline */
+.hm-tl-icon-wrap {
   position: absolute;
-  left: -28px;
-  top: 6px;
-  width: 13px; height: 13px;
-  border-radius: 50%;
-  background: #020202;
-  border: 2px solid rgba(0, 240, 255, 0.25);
-  flex-shrink: 0;
+  left: -44px;
+  top: 2px;
   z-index: 1;
-  transition: border-color 0.3s;
 }
 
-.hm-tl-dot--active {
+.hm-tl-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  background: #020202;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0, 240, 255, 0.4);
+  transition: border-color 0.3s, color 0.3s, box-shadow 0.3s;
+}
+
+.hm-tl-icon--active {
   border-color: #00f0ff;
-  background: rgba(0, 240, 255, 0.2);
-  box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+  color: #00f0ff;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.35);
+  background: rgba(0, 240, 255, 0.08);
 }
 
-.hm-tl-dot--pulse {
+.hm-tl-icon--pulse {
   border-color: #00ff88;
-  background: rgba(0, 255, 136, 0.15);
-  box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
-  animation: hm-tl-pulse 2s ease-in-out infinite;
+  color: #00ff88;
+  box-shadow: 0 0 12px rgba(0, 255, 136, 0.4);
+  background: rgba(0, 255, 136, 0.06);
+  animation: hm-icon-pulse 2.2s ease-in-out infinite;
 }
 
-@keyframes hm-tl-pulse {
-  0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 136, 0.5); }
-  50%       { box-shadow: 0 0 20px rgba(0, 255, 136, 0.9), 0 0 40px rgba(0, 255, 136, 0.3); }
+@keyframes hm-icon-pulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(0, 255, 136, 0.4); }
+  50%       { box-shadow: 0 0 24px rgba(0, 255, 136, 0.7), 0 0 48px rgba(0, 255, 136, 0.2); }
 }
 
-.hm-timeline-item:hover .hm-tl-dot { border-color: #00f0ff; }
+.hm-timeline-item:hover .hm-tl-icon {
+  border-color: rgba(0, 240, 255, 0.6);
+  color: rgba(0, 240, 255, 0.8);
+}
 
 .hm-tl-content { flex: 1; }
 
@@ -563,7 +1217,7 @@ html, body {
   margin: 0;
 }
 
-/* ── Banda de métricas grandes ── */
+/* ── Métricas con contador ── */
 .hm-metrics-band {
   display: flex;
   align-items: center;
@@ -575,7 +1229,6 @@ html, body {
   overflow: hidden;
 }
 
-/* Línea de energía animada en el fondo */
 .hm-metrics-band::after {
   content: '';
   position: absolute;
@@ -627,18 +1280,125 @@ html, body {
   background: rgba(0, 240, 255, 0.08);
 }
 
+/* Span del contador */
+.hm-count {
+  display: inline;
+}
+
 /* ============================================================
-   UTILITY (retrocompatibilidad con clases del template original)
+   VIDEO MODAL
    ============================================================ */
 
-/* Mantener .cyber-btn por si se usa en otro lugar */
+.hm-video-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  pointer-events: none;
+  transition: background 0.35s;
+}
+
+.hm-video-modal--open {
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  pointer-events: auto;
+}
+
+.hm-modal-inner {
+  position: relative;
+  width: 100%;
+  max-width: 960px;
+  background: rgba(4, 6, 14, 0.98);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  box-shadow: 0 0 80px rgba(0, 0, 0, 0.8), 0 0 40px rgba(0, 240, 255, 0.06);
+  transform: scale(0.92);
+  opacity: 0;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+}
+
+.hm-video-modal--open .hm-modal-inner {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.hm-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(0, 240, 255, 0.08);
+}
+
+.hm-modal-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.hm-modal-eyebrow {
+  font-size: 7px;
+  letter-spacing: 5px;
+  color: rgba(0, 240, 255, 0.3);
+  font-weight: 700;
+}
+
+.hm-modal-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: white;
+  letter-spacing: 0.3px;
+  margin: 0;
+}
+
+.hm-modal-close {
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  color: rgba(0, 240, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: none;
+  transition: all 0.22s;
+}
+
+.hm-modal-close:hover {
+  border-color: rgba(255, 51, 102, 0.4);
+  color: rgba(255, 51, 102, 0.8);
+}
+
+.hm-modal-video-wrap {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  overflow: hidden;
+}
+
+.hm-modal-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* ============================================================
+   UTILITY (retrocompatibilidad)
+   ============================================================ */
+
 .cyber-btn {
   background: transparent;
   border: 1px solid #00f0ff;
   color: #00f0ff;
   letter-spacing: 0.3em;
   transition: 0.4s;
-  cursor: pointer;
+  cursor: none;
 }
 
 .cyber-btn:hover {
@@ -648,14 +1408,21 @@ html, body {
 }
 
 /* ============================================================
+   CONTACT SECTION (fix animación)
+   ============================================================ */
+
+.hm-contact-section {
+  /* willChange para que GSAP pueda animar sin jank */
+  will-change: transform, opacity;
+}
+
+/* ============================================================
    RESPONSIVE
    ============================================================ */
 
 @media (max-width: 900px) {
-
   .hm-nav-inner { padding: 16px 20px; }
   .hm-nav-status { display: none; }
-
   .hm-hero-title { font-size: 18vw; }
 
   .hm-identity-grid {
@@ -679,4 +1446,25 @@ html, body {
 
   .hm-about-stat-divider { display: none; }
   .hm-about-stat { padding: 0; }
+
+  .hm-hero-stats {
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+  }
+
+  .hm-hero-stat-sep { display: none; }
+  .hm-hero-stat { padding: 0 16px; }
+
+  .hm-video-features {
+    gap: 7px;
+  }
+
+  .hm-section-divider { padding: 0 20px; }
+}
+
+@media (max-width: 600px) {
+  .hm-player-wrap { max-width: 100%; }
+  .hm-video-modal { padding: 12px; }
+  .hm-identity-section { padding-top: 3rem; padding-bottom: 3rem; }
 }

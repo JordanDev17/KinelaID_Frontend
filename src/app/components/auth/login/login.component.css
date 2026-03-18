@@ -1,27 +1,1089 @@
-/* Animación de escaneo del video */
-.scan-line-video {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 4px;
-    background: #00ff88;
-    box-shadow: 0 0 15px #00ff88;
-    z-index: 20;
-    animation: scanning 2.5s infinite ease-in-out;
+/* ============================================================
+   login.component.css — KinelaID Auth v3
+   Prefijo: .lg-
+   Diseño: Terminal de acceso biométrico de grado militar.
+   Split: panel de estado (izq) + terminal principal (der)
+   ============================================================ */
+
+/* ── Variables ── */
+:host {
+  display: block;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
 }
 
-@keyframes scanning {
-    0% { top: 0; opacity: 0; }
-    50% { top: 100%; opacity: 1; }
-    100% { top: 0; opacity: 0; }
+/* ── Shell ── */
+.lg-shell {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  grid-template-rows: 1fr;
+  background: #020408;
+  overflow: hidden;
+  cursor: none;
 }
 
-.pulse-ring {
-    animation: pulse-ring 2s infinite ease-in-out;
+/* ============================================================
+   CURSOR
+   ============================================================ */
+
+.lg-cursor {
+  position: fixed;
+  width: 5px;
+  height: 5px;
+  background: #00f0ff;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 8px #00f0ff, 0 0 20px rgba(0, 240, 255, 0.3);
 }
 
-@keyframes pulse-ring {
-    0%, 100% { opacity: 0.2; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(1.08); }
+.lg-cursor-ring {
+  position: fixed;
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(0, 240, 255, 0.45);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9998;
+  transform: translate(-50%, -50%);
+}
+
+/* ============================================================
+   FONDO
+   ============================================================ */
+
+.lg-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Grid de fondo */
+.lg-bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  animation: lg-grid-drift 60s linear infinite;
+}
+
+@keyframes lg-grid-drift {
+  0%   { background-position: 0 0, 0 0; }
+  100% { background-position: 40px 40px, 40px 40px; }
+}
+
+/* Viñeta */
+.lg-bg-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(2, 4, 8, 0.9) 100%);
+}
+
+/* Scan line del fondo */
+.lg-bg-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.12), transparent);
+  animation: lg-bg-scan 8s ease-in-out infinite;
+}
+
+@keyframes lg-bg-scan {
+  0%   { top: -2px; opacity: 0; }
+  5%   { opacity: 1; }
+  95%  { opacity: 0.4; }
+  100% { top: 100vh; opacity: 0; }
+}
+
+/* ============================================================
+   ESQUINAS DEL VIEWPORT
+   ============================================================ */
+
+.lg-corner {
+  position: fixed;
+  width: 32px;
+  height: 32px;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0.35;
+}
+
+.lg-corner--tl { top: 16px;  left: 16px;  border-top:    1px solid #00f0ff; border-left:   1px solid #00f0ff; }
+.lg-corner--tr { top: 16px;  right: 16px; border-top:    1px solid #00f0ff; border-right:  1px solid #00f0ff; }
+.lg-corner--bl { bottom: 16px; left: 16px;  border-bottom: 1px solid #00f0ff; border-left:   1px solid #00f0ff; }
+.lg-corner--br { bottom: 16px; right: 16px; border-bottom: 1px solid #00f0ff; border-right:  1px solid #00f0ff; }
+
+/* ============================================================
+   PANEL DE ESTADO — IZQUIERDA
+   ============================================================ */
+
+.lg-status-panel {
+  grid-column: 1;
+  background: rgba(0, 6, 14, 0.85);
+  border-right: 1px solid rgba(0, 240, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  padding: 28px 20px;
+  gap: 0;
+  position: relative;
+  z-index: 10;
+  overflow: hidden;
+}
+
+/* Línea de brillo derecha */
+.lg-status-panel::after {
+  content: '';
+  position: absolute;
+  right: 0; top: 0;
+  width: 1px; height: 100%;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(0, 240, 255, 0.3) 25%,
+    rgba(0, 240, 255, 0.15) 60%,
+    rgba(0, 240, 255, 0.3) 80%,
+    transparent
+  );
+  animation: lg-pulse-line 5s ease-in-out infinite;
+}
+
+@keyframes lg-pulse-line {
+  0%, 100% { opacity: 0.5; }
+  50%       { opacity: 1; }
+}
+
+.lg-sp-logo {
+  font-size: 20px;
+  font-weight: 900;
+  color: white;
+  letter-spacing: -0.5px;
+  margin-bottom: 24px;
+  text-shadow: 0 0 18px rgba(0, 240, 255, 0.3);
+}
+
+.lg-sp-logo span {
+  color: #00ff88;
+  text-shadow: 0 0 14px rgba(0, 255, 136, 0.5);
+}
+
+.lg-sp-divider {
+  height: 1px;
+  background: rgba(0, 240, 255, 0.07);
+  margin: 12px 0;
+}
+
+.lg-sp-block {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 0;
+}
+
+.lg-sp-label {
+  font-size: 7px;
+  letter-spacing: 3px;
+  color: rgba(0, 240, 255, 0.25);
+  font-weight: 700;
+}
+
+.lg-sp-val {
+  font-size: 9.5px;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.38);
+  font-weight: 700;
+}
+
+.lg-sp-val--on {
+  color: #00ff88;
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.3);
+  animation: lg-blink 2.5s ease-in-out infinite;
+}
+
+.lg-sp-val--accent {
+  color: #00f0ff;
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+}
+
+@keyframes lg-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
+.lg-sp-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.lg-sp-pip {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #00ff88;
+  box-shadow: 0 0 8px rgba(0, 255, 136, 0.6);
+  flex-shrink: 0;
+  animation: lg-blink 2.5s ease-in-out infinite;
+}
+
+.lg-sp-build {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-top: 12px;
+}
+
+.lg-sp-mono {
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: rgba(0, 240, 255, 0.2);
+  font-family: 'Courier New', monospace;
+}
+
+/* Barra de actividad */
+.lg-sp-activity {
+  margin-top: 16px;
+}
+
+.lg-sp-activity-bar {
+  height: 2px;
+  background: rgba(0, 240, 255, 0.06);
+  overflow: hidden;
+}
+
+.lg-sp-activity-fill {
+  height: 100%;
+  background: linear-gradient(90deg, transparent, #00f0ff, transparent);
+  animation: lg-activity 3s ease-in-out infinite;
+}
+
+@keyframes lg-activity {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+
+/* ============================================================
+   TERMINAL PRINCIPAL — DERECHA
+   ============================================================ */
+
+.lg-main {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 10;
+  overflow: hidden;
+}
+
+/* Barra de título del terminal */
+.lg-terminal-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 28px;
+  background: rgba(0, 6, 14, 0.7);
+  border-bottom: 1px solid rgba(0, 240, 255, 0.07);
+  flex-shrink: 0;
+}
+
+.lg-tb-dots {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.lg-tb-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.lg-tb-dot--red   { background: rgba(255, 90, 90, 0.65); }
+.lg-tb-dot--amber { background: rgba(255, 184, 0, 0.65); }
+.lg-tb-dot--green { background: rgba(0, 255, 136, 0.65); }
+
+.lg-tb-title {
+  flex: 1;
+  font-size: 8px;
+  letter-spacing: 3px;
+  color: rgba(0, 240, 255, 0.22);
+  font-weight: 700;
+}
+
+.lg-tb-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 8px;
+  letter-spacing: 3px;
+  color: rgba(0, 255, 136, 0.4);
+  font-weight: 700;
+}
+
+.lg-tb-pip {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #00ff88;
+  box-shadow: 0 0 6px #00ff88;
+  animation: lg-blink 1.8s ease-in-out infinite;
+}
+
+/* Cuerpo del terminal */
+.lg-terminal-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 48px;
+  overflow-y: auto;
+}
+
+.lg-terminal-body::-webkit-scrollbar { width: 4px; }
+.lg-terminal-body::-webkit-scrollbar-thumb { background: rgba(0, 240, 255, 0.1); }
+
+/* ============================================================
+   PASO GENÉRICO
+   ============================================================ */
+
+.lg-step {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.lg-step--bio {
+  max-width: 700px;
+}
+
+.lg-step-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lg-step-header--bio {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.lg-step-tag {
+  font-size: 8px;
+  letter-spacing: 5px;
+  color: rgba(0, 240, 255, 0.35);
+  font-weight: 700;
+}
+
+.lg-step-title {
+  font-size: 40px;
+  font-weight: 900;
+  color: white;
+  line-height: 1.1;
+  letter-spacing: -1px;
+  margin: 0;
+  text-shadow: 0 0 30px rgba(255, 255, 255, 0.08);
+}
+
+.lg-step-title em {
+  font-style: normal;
+  color: #00f0ff;
+  text-shadow: 0 0 20px rgba(0, 240, 255, 0.35);
+}
+
+.lg-step-title--sm {
+  font-size: 28px;
+}
+
+.lg-step-sub {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: rgba(255, 255, 255, 0.22);
+  margin: 0;
+}
+
+/* ── Formulario ── */
+.lg-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.lg-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.lg-field-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 8px;
+  letter-spacing: 4px;
+  color: rgba(0, 240, 255, 0.38);
+  font-weight: 700;
+}
+
+.lg-input-wrap {
+  position: relative;
+}
+
+.lg-input {
+  width: 100%;
+  background: rgba(0, 240, 255, 0.025);
+  border: 1px solid rgba(0, 240, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  padding: 13px 16px;
+  outline: none;
+  transition: border-color 0.25s, background 0.25s;
+  box-sizing: border-box;
+}
+
+.lg-input:focus {
+  border-color: rgba(0, 240, 255, 0.35);
+  background: rgba(0, 240, 255, 0.04);
+}
+
+.lg-input::placeholder {
+  color: rgba(255, 255, 255, 0.12);
+}
+
+/* Línea de focus animada */
+.lg-input-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: #00f0ff;
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.lg-input-wrap:focus-within .lg-input-bar {
+  width: 100%;
+}
+
+/* Select */
+.lg-select {
+  width: 100%;
+  background: rgba(0, 240, 255, 0.025);
+  border: 1px solid rgba(0, 240, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  padding: 10px 14px;
+  outline: none;
+  transition: border-color 0.25s;
+  box-sizing: border-box;
+  appearance: none;
+  cursor: none;
+}
+
+.lg-select:focus {
+  border-color: rgba(0, 240, 255, 0.3);
+}
+
+.lg-select option {
+  background: #020408;
+}
+
+/* ── Mensajes ── */
+.lg-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 9.5px;
+  letter-spacing: 1px;
+  color: rgba(255, 80, 100, 0.85);
+  border: 1px solid rgba(255, 80, 100, 0.18);
+  background: rgba(255, 51, 66, 0.06);
+  padding: 10px 12px;
+  line-height: 1.5;
+}
+
+/* ── Botones ── */
+.lg-btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  padding: 14px 20px;
+  background: rgba(0, 240, 255, 0.1);
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  color: #00f0ff;
+  font-size: 10px;
+  letter-spacing: 3px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  cursor: none;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s;
+}
+
+.lg-btn-primary::before {
+  content: '';
+  position: absolute;
+  left: -100%; top: 0;
+  width: 100%; height: 100%;
+  background: rgba(0, 240, 255, 0.1);
+  transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.lg-btn-primary:hover:not(:disabled)::before { left: 0; }
+.lg-btn-primary:hover:not(:disabled) {
+  border-color: #00f0ff;
+  box-shadow: 0 0 28px rgba(0, 240, 255, 0.2), inset 0 0 20px rgba(0, 240, 255, 0.04);
+}
+.lg-btn-primary:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* Botón secundario (solo contorno delgado) */
+.lg-btn-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 16px;
+  background: transparent;
+  border: 1px solid rgba(0, 240, 255, 0.18);
+  color: rgba(0, 240, 255, 0.55);
+  font-size: 9px;
+  letter-spacing: 3px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  cursor: none;
+  transition: all 0.25s;
+}
+
+.lg-btn-secondary:hover {
+  border-color: rgba(0, 240, 255, 0.4);
+  color: #00f0ff;
+  background: rgba(0, 240, 255, 0.04);
+}
+
+/* Botón ghost */
+.lg-btn-ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 9px 14px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.22);
+  font-size: 9px;
+  letter-spacing: 2.5px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  cursor: none;
+  transition: all 0.22s;
+}
+
+.lg-btn-ghost:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* Spinner del botón */
+.lg-btn-spinner {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid rgba(0, 240, 255, 0.2);
+  border-top-color: #00f0ff;
+  border-radius: 50%;
+  animation: lg-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes lg-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Footer del paso */
+.lg-step-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.lg-sf-line {
+  flex: 1;
+  height: 1px;
+  background: rgba(0, 240, 255, 0.06);
+}
+
+.lg-sf-text {
+  font-size: 7px;
+  letter-spacing: 2.5px;
+  color: rgba(255, 255, 255, 0.1);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   PASO BIOMÉTRICO
+   ============================================================ */
+
+.lg-bio-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  align-items: start;
+}
+
+/* ── SCANNER ── */
+.lg-scanner-wrap {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border: 1px solid rgba(0, 240, 255, 0.12);
+  background: rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+
+/* Esquinas del scanner */
+.lg-sc-corner {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  z-index: 10;
+}
+
+.lg-sc-corner--tl { top:    -1px; left:   -1px; border-top:    2px solid rgba(0, 240, 255, 0.8); border-left:   2px solid rgba(0, 240, 255, 0.8); }
+.lg-sc-corner--tr { top:    -1px; right:  -1px; border-top:    2px solid rgba(0, 240, 255, 0.8); border-right:  2px solid rgba(0, 240, 255, 0.8); }
+.lg-sc-corner--bl { bottom: -1px; left:   -1px; border-bottom: 2px solid rgba(0, 240, 255, 0.8); border-left:   2px solid rgba(0, 240, 255, 0.8); }
+.lg-sc-corner--br { bottom: -1px; right:  -1px; border-bottom: 2px solid rgba(0, 240, 255, 0.8); border-right:  2px solid rgba(0, 240, 255, 0.8); }
+
+/* Labels de medición */
+.lg-sc-label {
+  position: absolute;
+  font-size: 6px;
+  letter-spacing: 3px;
+  color: rgba(0, 240, 255, 0.3);
+  font-weight: 700;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.lg-sc-label--top  { top: 8px;  left: 50%; transform: translateX(-50%); }
+.lg-sc-label--bot  { bottom: 8px; left: 50%; transform: translateX(-50%); }
+.lg-sc-label--left {
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%) rotate(-90deg);
+  transform-origin: center center;
+}
+.lg-sc-label--right {
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%) rotate(90deg);
+  transform-origin: center center;
+}
+
+/* Área de video */
+.lg-sc-feed {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* Grid overlay del scanner */
+.lg-sc-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0, 240, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.lg-sc-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Canvas */
+.lg-sc-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.lg-sc-canvas--visible {
+  opacity: 1;
+}
+
+/* Scan line del scanner */
+.lg-sc-scan-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00f0ff, transparent);
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.7);
+  z-index: 5;
+  pointer-events: none;
+  animation: lg-scanner-scan 3s ease-in-out infinite;
+}
+
+@keyframes lg-scanner-scan {
+  0%   { top: 0;    opacity: 0; }
+  5%   { opacity: 1; }
+  95%  { opacity: 0.7; }
+  100% { top: 100%; opacity: 0; }
+}
+
+/* Reticle facial */
+.lg-sc-reticle {
+  position: absolute;
+  top: 15%;
+  left: 20%;
+  right: 20%;
+  bottom: 10%;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.lg-sc-reticle-tl,
+.lg-sc-reticle-tr,
+.lg-sc-reticle-bl,
+.lg-sc-reticle-br {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+}
+
+.lg-sc-reticle-tl { top: 0; left: 0;     border-top:    1.5px solid rgba(0, 255, 136, 0.7); border-left:   1.5px solid rgba(0, 255, 136, 0.7); }
+.lg-sc-reticle-tr { top: 0; right: 0;    border-top:    1.5px solid rgba(0, 255, 136, 0.7); border-right:  1.5px solid rgba(0, 255, 136, 0.7); }
+.lg-sc-reticle-bl { bottom: 0; left: 0;  border-bottom: 1.5px solid rgba(0, 255, 136, 0.7); border-left:   1.5px solid rgba(0, 255, 136, 0.7); }
+.lg-sc-reticle-br { bottom: 0; right: 0; border-bottom: 1.5px solid rgba(0, 255, 136, 0.7); border-right:  1.5px solid rgba(0, 255, 136, 0.7); }
+
+/* Cruz central */
+.lg-sc-reticle-cross-h {
+  position: absolute;
+  top: 50%;
+  left: 35%; right: 35%;
+  height: 1px;
+  background: rgba(0, 255, 136, 0.2);
+}
+
+.lg-sc-reticle-cross-v {
+  position: absolute;
+  left: 50%;
+  top: 20%; bottom: 20%;
+  width: 1px;
+  background: rgba(0, 255, 136, 0.2);
+}
+
+/* Scan del reticle */
+.lg-sc-reticle-scan {
+  position: absolute;
+  left: 0; right: 0;
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent, rgba(0, 255, 136, 0.8), transparent);
+  box-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
+  animation: lg-reticle-scan 2.2s ease-in-out infinite;
+}
+
+@keyframes lg-reticle-scan {
+  0%   { top: 0;    opacity: 0; }
+  5%   { opacity: 1; }
+  95%  { opacity: 0.7; }
+  100% { top: 100%; opacity: 0; }
+}
+
+/* Spinner de captura */
+.lg-sc-capturing {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 8;
+  font-size: 7.5px;
+  letter-spacing: 4px;
+  color: rgba(0, 240, 255, 0.6);
+  font-weight: 700;
+}
+
+.lg-sc-cap-ring {
+  width: 36px;
+  height: 36px;
+  border: 2px solid rgba(0, 240, 255, 0.1);
+  border-top-color: #00f0ff;
+  border-radius: 50%;
+  animation: lg-spin 0.9s linear infinite;
+}
+
+/* Éxito de captura */
+.lg-sc-success {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 8;
+  font-size: 7.5px;
+  letter-spacing: 4px;
+  color: #00ff88;
+  font-weight: 700;
+}
+
+.lg-sc-success-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0, 255, 136, 0.3);
+  background: rgba(0, 255, 136, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 24px rgba(0, 255, 136, 0.2);
+}
+
+/* Placeholder */
+.lg-sc-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 8px;
+  letter-spacing: 3px;
+  color: rgba(0, 240, 255, 0.18);
+  font-weight: 700;
+}
+
+/* Barra de confianza */
+.lg-sc-confidence {
+  position: absolute;
+  right: -18px;
+  top: 20px;
+  bottom: 20px;
+  width: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.lg-sc-conf-track {
+  flex: 1;
+  width: 3px;
+  background: rgba(0, 240, 255, 0.06);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+}
+
+.lg-sc-conf-fill {
+  width: 100%;
+  height: 0%;
+  background: linear-gradient(to top, #00f0ff, rgba(0, 240, 255, 0.3));
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
+  transition: height 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.lg-sc-conf-label {
+  font-size: 6px;
+  letter-spacing: 1px;
+  color: rgba(0, 240, 255, 0.2);
+  font-weight: 700;
+  writing-mode: vertical-lr;
+  transform: rotate(180deg);
+}
+
+/* ── Controles biométricos ── */
+.lg-bio-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.lg-bio-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+/* Indicador de modo */
+.lg-bio-mode {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 8.5px;
+  letter-spacing: 2px;
+  color: rgba(255, 255, 255, 0.2);
+  font-weight: 700;
+  padding: 8px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.lg-bio-mode-pip {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.lg-bio-mode-pip--green {
+  background: #00ff88;
+  box-shadow: 0 0 8px rgba(0, 255, 136, 0.5);
+  animation: lg-blink 2s ease-in-out infinite;
+}
+
+.lg-bio-mode-pip--red {
+  background: rgba(255, 60, 80, 0.8);
+  box-shadow: 0 0 8px rgba(255, 60, 80, 0.4);
+}
+
+/* Warning de stream */
+.lg-bio-warn {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: rgba(255, 184, 0, 0.65);
+  border: 1px solid rgba(255, 184, 0, 0.14);
+  background: rgba(255, 184, 0, 0.04);
+  padding: 11px 13px;
+  line-height: 1.5;
+}
+
+.lg-bio-warn-btn {
+  font-size: 8px;
+  letter-spacing: 2.5px;
+  font-weight: 700;
+  color: rgba(0, 240, 255, 0.6);
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: none;
+  transition: color 0.2s;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  text-align: left;
+}
+
+.lg-bio-warn-btn:hover { color: #00f0ff; }
+
+/* Botones de acción bio */
+.lg-bio-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+/* Meta info del frame */
+.lg-bio-meta {
+  border: 1px solid rgba(0, 240, 255, 0.07);
+  background: rgba(0, 240, 255, 0.018);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.lg-bio-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.lg-bio-meta-k {
+  font-size: 7px;
+  letter-spacing: 3px;
+  color: rgba(0, 240, 255, 0.25);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.lg-bio-meta-v {
+  font-size: 8.5px;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.3);
+  font-weight: 700;
+  text-align: right;
+}
+
+.lg-bio-meta-v--ok {
+  color: #00ff88;
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.3);
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 900px) {
+  .lg-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .lg-status-panel { display: none; }
+
+  .lg-terminal-body { padding: 24px 20px; }
+
+  .lg-bio-layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .lg-scanner-wrap {
+    aspect-ratio: 4 / 3;
+    max-width: 320px;
+    margin: 0 auto;
+  }
+
+  .lg-sc-confidence { display: none; }
+
+  .lg-step--bio { max-width: 100%; }
+
+  .lg-step-header--bio {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 600px) {
+  .lg-step-title { font-size: 30px; }
+  .lg-corner { display: none; }
+  .lg-terminal-body { padding: 20px 16px; }
 }
