@@ -117,6 +117,15 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     document.removeEventListener('mouseenter', this.onMouseEnter);
   }
 
+    public goBack(): void {
+    gsap.to('.lg-shell', {
+      opacity: 0,
+      duration: 0.4,
+      ease: 'power2.in',
+      onComplete: () => {this.router.navigate(['/home-kinela'])}
+    });
+  }
+
   /* ════════════════════════════════════════════════════
      CURSOR
   ════════════════════════════════════════════════════ */
@@ -171,72 +180,47 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
      INTRO ANIMATION — scan line → stagger de elementos
   ════════════════════════════════════════════════════ */
 
-  private runIntro(): void {
-    // 1. Scan line horizontal
-    const scanLine = document.createElement('div');
-    scanLine.style.cssText = `
-      position: fixed;
-      top: 50%;
-      left: 0;
-      width: 100vw;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, #00f0ff, transparent);
-      box-shadow: 0 0 14px rgba(0, 240, 255, 0.8);
-      z-index: 9990;
-      pointer-events: none;
-      transform-origin: left center;
-    `;
-    document.body.appendChild(scanLine);
+private runIntro(): void {
+  // Ocultar todo primero
+  gsap.set('.lg-status-panel', { x: -30, opacity: 0 });
+  gsap.set('.lg-terminal-bar', { y: -14, opacity: 0 });
+  gsap.set('.lg-nav-bar',      { y: -10, opacity: 0 });
+  gsap.set('.lg-step-header',  { y: 18,  opacity: 0 });
+  gsap.set('.lg-field',        { y: 16,  opacity: 0 });
+  gsap.set('.lg-step-footer',  { opacity: 0 });
+  gsap.set('.lg-corner',       { scale: 0.4, opacity: 0 });
 
-    const tl = gsap.timeline({
-      onComplete: () => {
-        gsap.to(scanLine, { opacity: 0, duration: 0.25, onComplete: () => scanLine.remove() });
-      }
-    });
+  // El botón submit lo manejamos por su clase específica dentro del form
+  const submitBtn = document.querySelector('.lg-form .lg-btn-primary') as HTMLElement;
+  if (submitBtn) gsap.set(submitBtn, { y: 12, opacity: 0 });
 
-    // Scan line barre
-    tl.fromTo(scanLine,
-      { scaleX: 0, opacity: 0 },
-      { scaleX: 1, opacity: 0.85, duration: 0.5, ease: 'power2.inOut' }
-    )
-    .to(scanLine, { opacity: 0, duration: 0.2 })
-
-    // Panel de estado
-    .from('.lg-status-panel', {
-      x: -30, opacity: 0, duration: 0.6, ease: 'power3.out'
-    }, '-=0.1')
-
-    // Barra de título del terminal
-    .from('.lg-terminal-bar', {
-      y: -14, opacity: 0, duration: 0.5, ease: 'power2.out'
+  gsap.timeline({ delay: 0.15 })
+    .to('.lg-status-panel', {
+      x: 0, opacity: 1, duration: 0.6, ease: 'power3.out'
+    })
+    .to('.lg-terminal-bar', {
+      y: 0, opacity: 1, duration: 0.5, ease: 'power2.out'
     }, '-=0.45')
-
-    // Header del paso
-    .from('.lg-step-header', {
-      y: 18, opacity: 0, duration: 0.55, ease: 'power3.out'
-    }, '-=0.4')
-
-    // Campos con stagger
-    .from('.lg-field', {
-      y: 16, opacity: 0, stagger: 0.1, duration: 0.45, ease: 'power2.out'
-    }, '-=0.38')
-
-    // Botón
-    .from('.lg-btn-primary', {
-      y: 12, opacity: 0, duration: 0.4, ease: 'power2.out'
+    .to('.lg-nav-bar', {
+      y: 0, opacity: 1, duration: 0.4, ease: 'power2.out'
+    }, '-=0.35')
+    .to('.lg-step-header', {
+      y: 0, opacity: 1, duration: 0.55, ease: 'power3.out'
     }, '-=0.3')
-
-    // Footer
-    .from('.lg-step-footer', {
-      opacity: 0, duration: 0.4
+    .to('.lg-field', {
+      y: 0, opacity: 1, stagger: 0.1, duration: 0.45, ease: 'power2.out'
+    }, '-=0.38')
+    .to(submitBtn, {
+      y: 0, opacity: 1, duration: 0.4, ease: 'power2.out'
+    }, '-=0.3')
+    .to('.lg-step-footer', {
+      opacity: 1, duration: 0.4
     }, '-=0.25')
-
-    // Esquinas del viewport
-    .from('.lg-corner', {
-      scale: 0.4, opacity: 0, stagger: 0.06, duration: 0.4,
+    .to('.lg-corner', {
+      scale: 1, opacity: 0.35, stagger: 0.06, duration: 0.4,
       transformOrigin: 'center center', ease: 'back.out(2)'
     }, '-=0.35');
-  }
+}
 
   /* ════════════════════════════════════════════════════
      PASO 1: CREDENCIALES

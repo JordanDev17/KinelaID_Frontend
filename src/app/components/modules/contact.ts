@@ -34,36 +34,36 @@ export class Contact implements AfterViewInit, OnDestroy {
 
   public currentTime = '';
 
-  public techPoints: TechPoint[] = [
-    {
-      name: 'HQ_KINELA',
-      coords: [4.7059, -74.2302],
-      type: 'primary',
-      description: 'Sede principal · Desarrollo & Operaciones',
-      status: 'ACTIVO'
-    },
-    {
-      name: 'NODE_RELAY_ALPHA',
-      coords: [4.7130, -74.2150],
-      type: 'relay',
-      description: 'Nodo de redundancia · Failover automático',
-      status: 'STANDBY'
-    },
-    {
-      name: 'SENSOR_GRID_01',
-      coords: [4.6980, -74.2380],
-      type: 'sensor',
-      description: 'Punto de monitoreo · Reconocimiento facial',
-      status: 'ACTIVO'
-    },
-    {
-      name: 'DATACENTER_WEST',
-      coords: [4.7100, -74.2450],
-      type: 'node',
-      description: 'Centro de datos · Procesamiento edge',
-      status: 'ACTIVO'
-    }
-  ];
+public techPoints: TechPoint[] = [
+  {
+    name: 'HQ_KINELA',
+    coords: [4.716206946669707, -74.2214449806638], // Mosquera - Ecoplaza
+    type: 'primary',
+    description: 'Sede principal · Desarrollo & Operaciones · Control central de IA',
+    status: 'ACTIVO'
+  },
+  {
+    name: 'PARQUE EMPRESARIAL TECNOLOGICO',
+    coords: [4.744898764127665, -74.13999925725251], // Zona Parque Tecnológico Bogotá
+    type: 'node',
+    description: 'Hub tecnológico · Integración I+D · Conectividad empresarial',
+    status: 'ACTIVO'
+  },
+  {
+    name: 'CC UNILAGO',
+    coords: [4.7477015490879735, -74.14109419381164], // Norte Bogotá (zona universidades / innovación)
+    type: 'relay',
+    description: 'Zona principal de distribucion y mantenimiento, Hardware y Software',
+    status: 'ACTIVO'
+  },
+  {
+    name: 'CONNECTA 26',
+    coords: [4.686678583155332, -74.12046307682988], // Sabana occidente
+    type: 'sensor',
+    description: 'Zona de empresas y startups tecnologicas.',
+    status: 'ACTIVO'
+  },
+];
 
   private typeConfig: Record<string, { size: number }> = {
     primary: { size: 36 },
@@ -86,7 +86,6 @@ export class Contact implements AfterViewInit, OnDestroy {
           this.ngZone.runOutsideAngular(() => {
             setTimeout(() => {
               this.initMap();
-              this.initAnimations();
             }, 150);
           });
           observer.disconnect();
@@ -196,62 +195,20 @@ export class Contact implements AfterViewInit, OnDestroy {
     this.map.flyTo(coords, 16, { animate: true, duration: 1.5 });
   }
 
-  public openGmail(): void {
-    window.open(
-      `https://mail.google.com/mail/?view=cm&fs=1&to=j.rodriguez.dev@gmail.com&su=KINELA_CONTACT`,
-      '_blank'
-    );
+  public openGmail(
+    to: string = 'jordanrodriguez1707@gmail.com',
+    subject: string = 'KINELA_CONTACT',
+    body: string = 'Hola, me gustaría obtener más información sobre KinelaID.'
+  ): void {
+    const url = `https://mail.google.com/mail/?view=cm&fs=1` +
+      `&to=${encodeURIComponent(to)}` +
+      `&su=${encodeURIComponent(subject)}` +
+      `&body=${encodeURIComponent(body)}`;
+  
+    window.open(url, '_blank', 'noopener,noreferrer');
   }
 
-  private initAnimations(): void {
-    // Estado inicial — evita flash al re-visitar
-    gsap.set('.ck-header', { opacity: 0, y: -30 });
-    gsap.set('.ck-col-labels', { opacity: 0 });
-    gsap.set('.ck-panel', { opacity: 0, x: -24 });
-    gsap.set('.ck-footer-row', { opacity: 0 });
-    gsap.set('.ck-map-col', { opacity: 0, x: 24 });
 
-    const tl = gsap.timeline({ delay: 0.05 });
-
-    // 1. Header cae desde arriba
-    tl.to('.ck-header', {
-      opacity: 1,
-      y: 0,
-      duration: 0.7,
-      ease: 'power3.out'
-    });
-
-    // 2. Labels de columna
-    tl.to('.ck-col-labels', {
-      opacity: 1,
-      duration: 0.4,
-      ease: 'power2.out'
-    }, '-=0.3');
-
-    // 3. Paneles en cascada desde izquierda
-    tl.to('.ck-panel', {
-      opacity: 1,
-      x: 0,
-      duration: 0.55,
-      stagger: 0.09,
-      ease: 'power3.out'
-    }, '-=0.2');
-
-    // 4. Footer
-    tl.to('.ck-footer-row', {
-      opacity: 1,
-      duration: 0.4,
-      ease: 'power2.out'
-    }, '-=0.3');
-
-    // 5. Mapa desde derecha, en paralelo con los paneles
-    tl.to('.ck-map-col', {
-      opacity: 1,
-      x: 0,
-      duration: 0.8,
-      ease: 'expo.out'
-    }, 0.4); // empieza a los 0.4s absolutos de la timeline
-  }
 
   ngOnDestroy(): void {
     if (this.map) this.map.remove();

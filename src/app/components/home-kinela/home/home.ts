@@ -3,8 +3,9 @@ import {
   ElementRef,
   ViewChild,
   AfterViewInit,
-  OnDestroy
+  OnDestroy,NgZone, ChangeDetectorRef   
 } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -12,19 +13,22 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Contact } from '../../modules/contact';
 import { Services } from "../../modules/services";
+import { Prototipo } from '../../prototipo/prototipo';
 
 gsap.registerPlugin(ScrollTrigger);
 
 @Component({
   selector: 'app-home',
-  imports: [Contact, Services],
+  imports: [CommonModule,Contact, Services, Prototipo],
   standalone: true,
   templateUrl: './home.html',
   styleUrl: './home.css',
 })
 export class Home implements AfterViewInit, OnDestroy {
 
-  constructor(private router: Router) {}
+  constructor(  private router: Router,
+  private ngZone: NgZone,
+  private cdr: ChangeDetectorRef) {}
 
   @ViewChild('canvasContainer', { static: true })
   canvasRef!: ElementRef<HTMLDivElement>;
@@ -56,34 +60,58 @@ export class Home implements AfterViewInit, OnDestroy {
   // ── UI state ──
   public titleChars = 'KINELA·TECH'.split('');
   public videoModalOpen = false;
+  public teaserCargado  = false;   // ← añadir
+  public teaserError    = false;   // ← añadir
 
   // ── Cursor ──
   private cursorDot!: HTMLElement;
   private cursorRing!: HTMLElement;
   private cursorVisible = false;
+  private introPlayed = false;
 
   // ============================
   // LIFECYCLE
   // ============================
 
-  ngAfterViewInit(): void {
+ngAfterViewInit(): void {
+  // THREE y GSAP: todo fuera de Angular Zone
+  this.ngZone.runOutsideAngular(() => {
     this.initThree();
     this.addGlobalParticles();
     this.loadMainBust();
     this.setupScroll();
     this.animate();
-
-    window.addEventListener('mousemove', this.onMouseMove);
-    window.addEventListener('touchmove', this.onTouchMove);
-    window.addEventListener('resize', this.onResize);
-
-    // Inicializar sistemas de UI
     this.initCursor();
     this.initNavProgress();
     this.initHUD();
     this.initSectionDividerAnimations();
     this.initContactAnimation();
-  }
+    this.runIntro();
+  });
+
+  window.addEventListener('mousemove', this.onMouseMove);
+  window.addEventListener('touchmove', this.onTouchMove);
+  window.addEventListener('resize', this.onResize);
+
+  // Teaser: manejar loadeddata aquí, NO en el template
+  setTimeout(() => {
+    const v = this.videoTeaserRef?.nativeElement;
+    if (!v) return;
+    v.muted = true;
+    v.play().catch(() => {});
+
+    // Escuchar fuera de zone para no disparar change detection
+    this.ngZone.runOutsideAngular(() => {
+      v.addEventListener('loadeddata', () => {
+        // Entrar a zone solo para actualizar el binding
+        this.ngZone.run(() => {
+          this.teaserCargado = true;
+          this.cdr.markForCheck();
+        });
+      }, { once: true });
+    });
+  }, 1500);
+}
 
   ngOnDestroy(): void {
     cancelAnimationFrame(this.animationId);
@@ -111,6 +139,32 @@ export class Home implements AfterViewInit, OnDestroy {
       }
     });
   }
+
+ public scrollToTop(): void {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  document.documentElement.scrollTo({ top: 0, behavior: 'smooth' });
+  document.body.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Resetear modelo a posición inicial
+  gsap.to(this.mainModelGroup.position, {
+    x: 0, y: 0, z: 0,
+    duration: 0.8,
+    ease: 'power2.out'
+  });
+  gsap.to(this, {
+    scrollRotationY: Math.PI,
+    duration: 0.8,
+    ease: 'power2.out'
+  });
+  gsap.to(this.camera.position, {
+    z: 11,
+    duration: 0.8,
+    ease: 'power2.out'
+  });
+
+  // Refrescar ScrollTrigger después del scroll
+  setTimeout(() => ScrollTrigger.refresh(), 900);
+}
 
   // ============================
   // VIDEO MODAL
@@ -257,26 +311,23 @@ export class Home implements AfterViewInit, OnDestroy {
   // SECTION DIVIDERS — partículas de sección
   // ============================
 
-  private initSectionDividerAnimations(): void {
-    // Las partículas de los divisores ya son CSS puro (@keyframes hm-divider-travel)
-    // Aquí añadimos el reveal de cada divisor con ScrollTrigger
-    const dividers = document.querySelectorAll('.hm-section-divider');
-
-    dividers.forEach(div => {
-      gsap.from(div, {
-        scrollTrigger: {
-          trigger: div,
-          start: 'top 90%',
-          toggleActions: 'play none none reverse'
-        },
-        opacity: 0,
-        scaleX: 0.8,
-        transformOrigin: 'center',
-        duration: 0.6,
-        ease: 'power2.out'
-      });
+private initSectionDividerAnimations(): void {
+  const dividers = document.querySelectorAll('.hm-section-divider');
+  dividers.forEach(div => {
+    gsap.from(div, {
+      scrollTrigger: {
+        trigger: div,
+        start: 'top 90%',
+        once: true           
+      },
+      opacity: 0,
+      scaleX: 0.95,
+      transformOrigin: 'center',
+      duration: 0.5,
+      ease: 'power2.out'
     });
-  }
+  });
+}
 
   // ============================
   // COUNTERS ANIMADOS
@@ -389,23 +440,36 @@ export class Home implements AfterViewInit, OnDestroy {
   // ============================
 
   private initContactAnimation(): void {
-    // Apuntamos al wrapper .hm-contact-section, no al componente directamente,
-    // para evitar que ScrollTrigger pierda la referencia en componentes standalone
     const section = document.querySelector('.hm-contact-section');
     if (!section) return;
-
-    gsap.from(section, {
-      scrollTrigger: {
+  
+    // Esperar a que el componente hijo renderice
+    setTimeout(() => {
+      const root = section.querySelector('.ck-page');
+      if (!root) return;
+    
+      const q = (sel: string) => root.querySelectorAll(sel);
+    
+      gsap.set(q('.ck-header'),     { opacity: 0, y: -20 });
+      gsap.set(q('.ck-col-labels'), { opacity: 0 });
+      gsap.set(q('.ck-panel'),      { opacity: 0, x: -20 });
+      gsap.set(q('.ck-footer-row'), { opacity: 0 });
+      gsap.set(q('.ck-map-col'),    { opacity: 0, x: 20 });
+    
+      ScrollTrigger.create({
         trigger: section,
-        start: 'top 82%',
-        toggleActions: 'play none none none',
-        once: true
-      },
-      y: 70,
-      opacity: 0,
-      duration: 1.1,
-      ease: 'power3.out'
-    });
+        start: 'top 80%',
+        once: true,
+        onEnter: () => {
+          gsap.timeline()
+            .to(q('.ck-header'),     { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' })
+            .to(q('.ck-col-labels'), { opacity: 1, duration: 0.4 }, '-=0.3')
+            .to(q('.ck-panel'),      { opacity: 1, x: 0, duration: 0.5, stagger: 0.08, ease: 'power3.out' }, '-=0.2')
+            .to(q('.ck-footer-row'), { opacity: 1, duration: 0.4 }, '-=0.3')
+            .to(q('.ck-map-col'),    { opacity: 1, x: 0, duration: 0.7, ease: 'expo.out' }, 0.4);
+        }
+      });
+    }, 500);
   }
 
   // ============================
@@ -450,26 +514,22 @@ export class Home implements AfterViewInit, OnDestroy {
   // BUSTO 3D
   // ============================
 
-  private loadMainBust(): void {
-    new GLTFLoader().load('/assets/models/model-headface.glb', (gltf) => {
-      const model = gltf.scene;
-
-      model.traverse((n: any) => {
-        if (n.isMesh) {
-          n.material = new THREE.MeshStandardMaterial({
-            color: 0xcfd8dc,
-            metalness: 0.95,
-            roughness: 0.25
-          });
-        }
-      });
-
-      this.mainModelGroup.add(model);
-      this.mainModelGroup.scale.setScalar(5);
-
-      this.runIntro();
+private loadMainBust(): void {
+  new GLTFLoader().load('/assets/models/model-headface.glb', (gltf) => {
+    const model = gltf.scene;
+    model.traverse((n: any) => {
+      if (n.isMesh) {
+        n.material = new THREE.MeshStandardMaterial({
+          color: 0xcfd8dc,
+          metalness: 0.95,
+          roughness: 0.25
+        });
+      }
     });
-  }
+    this.mainModelGroup.add(model);
+    this.mainModelGroup.scale.setScalar(5);
+  });
+}
 
   // ============================
   // SCROLL CONTROL
@@ -680,93 +740,48 @@ export class Home implements AfterViewInit, OnDestroy {
   // INTRO ANIMACIÓN — con scan line
   // ============================
 
-  private runIntro(): void {
-    // 1. Crear scan line de sistema
-    const scanLine = document.createElement('div');
-    scanLine.style.cssText = `
-      position: fixed;
-      top: 50%;
-      left: 0;
-      width: 100vw;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, #00f0ff, transparent);
-      box-shadow: 0 0 16px rgba(0, 240, 255, 0.8);
-      z-index: 9990;
-      pointer-events: none;
-      transform-origin: left center;
-    `;
-    document.body.appendChild(scanLine);
+private runIntro(): void {
+  if (this.introPlayed) return;
+  this.introPlayed = true;
 
-    // 2. Timeline de entrada
-    const tl = gsap.timeline({
-      onComplete: () => {
-        gsap.to(scanLine, {
-          opacity: 0,
-          duration: 0.3,
-          onComplete: () => scanLine.remove()
-        });
-      }
-    });
+  gsap.set('.hm-char',         { opacity: 0, y: 40 });
+  gsap.set('.hm-hero-eyebrow', { opacity: 0, y: 16 });
+  gsap.set('.hm-separator',    { opacity: 0, y: 12 });
+  gsap.set('.hm-subtitle',     { opacity: 0, y: 12 });
+  gsap.set('.hm-hero-stats',   { opacity: 0, y: 8  });
+  gsap.set('.hm-scroll-cue',   { opacity: 0        });
+  gsap.set('.hm-hero-corner',  { opacity: 0        });
+  gsap.set('.hm-hud',          { opacity: 0, x: 16 });
 
-    // Scan line barre la pantalla
-    tl.fromTo(scanLine,
-      { scaleX: 0, opacity: 0 },
-      { scaleX: 1, opacity: 0.9, duration: 0.55, ease: 'power2.inOut' }
-    )
-    .to(scanLine, { opacity: 0, duration: 0.2 })
-
-    // Chars del título entran
-    .from('.hm-char', {
-      opacity: 0,
-      y: 55,
-      stagger: 0.05,
-      duration: 1.1,
-      ease: 'power4.out'
-    }, '-=0.05')
-
-    // Eyebrow
-    .from('.hm-hero-eyebrow', {
-      opacity: 0,
-      y: 18,
-      duration: 0.7
-    }, '-=0.85')
-
-    // Separador + subtítulo
-    .from('.hm-separator, .hm-subtitle', {
-      opacity: 0,
-      y: 14,
-      stagger: 0.12,
-      duration: 0.6
-    }, '-=0.6')
-
-    // Stats del hero
-    .from('.hm-hero-stats', {
-      opacity: 0,
-      y: 10,
-      duration: 0.5
-    }, '-=0.45')
-
-    // Scroll cue
-    .from('.hm-scroll-cue', {
-      opacity: 0,
-      duration: 0.5
-    }, '-=0.35')
-
-    // Esquinas del hero
-    .from('.hm-hero-corner', {
-      opacity: 0,
-      scale: 0.5,
-      stagger: 0.08,
-      duration: 0.4,
-      transformOrigin: 'center center'
+  gsap.timeline({ delay: 0.2 })
+    .to('.hm-char', {
+      opacity: 1, y: 0,
+      stagger: 0.04, duration: 0.85,
+      ease: 'power3.out',
+      clearProps: 'all'
+    })
+    .to('.hm-hero-eyebrow', {
+      opacity: 1, y: 0, duration: 0.5, clearProps: 'all'
+    }, '-=0.65')
+    .to('.hm-separator', {
+      opacity: 1, y: 0, duration: 0.45, clearProps: 'all'
     }, '-=0.4')
-
-    // HUD
-    .from('.hm-hud', {
-      opacity: 0,
-      x: 20,
-      duration: 0.6,
-      ease: 'power2.out'
-    }, '-=0.3');
-  }
+    .to('.hm-subtitle', {
+      opacity: 1, y: 0, duration: 0.45, clearProps: 'all'
+    }, '-=0.35')
+    .to('.hm-hero-stats', {
+      opacity: 1, y: 0, duration: 0.4, clearProps: 'all'
+    }, '-=0.3')
+    .to('.hm-scroll-cue', {
+      opacity: 1, duration: 0.35, clearProps: 'opacity'
+    }, '-=0.25')
+    .to('.hm-hero-corner', {
+      opacity: 0.3, duration: 0.3,
+      stagger: 0.05, clearProps: 'transform'
+    }, '-=0.25')
+    .to('.hm-hud', {
+      opacity: 1, x: 0, duration: 0.5,
+      ease: 'power2.out', clearProps: 'transform'
+    }, '-=0.2');
+}
 }

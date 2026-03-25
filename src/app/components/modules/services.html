@@ -113,7 +113,7 @@
       <p class="sv-featured-subtitle">BIOMETRIC · IDENTITY · CORE</p>
       <p class="sv-featured-desc">
         Motor de reconocimiento facial de alta precisión con detección en tiempo real,
-        análisis de vivacidad y mapeo de 468 puntos de referencia facial.
+        análisis de vivacidad y mapeo de vectores.
         Procesamiento on-device con latencia sub-100ms.
       </p>
 
@@ -127,18 +127,14 @@
           <span class="sv-spec-lbl">LATENCIA</span>
         </div>
         <div class="sv-spec">
-          <span class="sv-spec-val">468</span>
-          <span class="sv-spec-lbl">LANDMARKS</span>
+          <span class="sv-spec-val">128</span>
+          <span class="sv-spec-lbl">VECTORES</span>
         </div>
       </div>
-
+<!---->
       <button class="sv-btn-explore" (click)="exploreService('facial')">
-        <span class="sv-btn-text">EXPLORAR MÓDULO</span>
-        <span class="sv-btn-icon">
-          <svg viewBox="0 0 20 20" width="16" height="16">
-            <path d="M4 10h12M11 5l5 5-5 5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-          </svg>
-        </span>
+        <span class="sv-btn-text">Motor Reconocimiento IA</span>
+
       </button>
 
     </div>
@@ -188,7 +184,7 @@
       </p>
 
       <div class="sv-card-tags">
-        <span class="sv-tag">Torniquetes</span>
+        <span class="sv-tag">Cerraduras</span>
         <span class="sv-tag">RFID</span>
         <span class="sv-tag">Multi-factor</span>
       </div>
@@ -198,7 +194,6 @@
           <span class="sv-stat-n sv-stat-n--green">24/7</span>
           <span class="sv-stat-l">COBERTURA</span>
         </span>
-        <button class="sv-card-btn" (click)="exploreService('access')">VER →</button>
       </div>
 
       <div class="sv-corner sv-corner--tl"></div>
@@ -237,21 +232,20 @@
       <p class="sv-card-sub">ENROLL · BIOMETRIC · DB</p>
       <p class="sv-card-desc">
         Captura y enrolamiento de identidades biométricas.
-        Soporte para huella, rostro e iris. Base de datos encriptada y auditable.
+        Base de datos encriptada y auditable.
       </p>
 
       <div class="sv-card-tags">
-        <span class="sv-tag">Huella</span>
+        <span class="sv-tag">Rostro</span>
         <span class="sv-tag">Iris</span>
         <span class="sv-tag">AES-256</span>
       </div>
 
       <div class="sv-card-footer">
         <span class="sv-card-stat">
-          <span class="sv-stat-n sv-stat-n--amber">1M+</span>
+          <span class="sv-stat-n sv-stat-n--amber">100+</span>
           <span class="sv-stat-l">REGISTROS</span>
         </span>
-        <button class="sv-card-btn" (click)="exploreService('register')">VER →</button>
       </div>
 
       <div class="sv-corner sv-corner--tl"></div>
@@ -307,7 +301,6 @@
           <span class="sv-stat-n sv-stat-n--purple">RT</span>
           <span class="sv-stat-l">TIEMPO REAL</span>
         </span>
-        <button class="sv-card-btn" (click)="exploreService('analytics')">VER →</button>
       </div>
 
       <div class="sv-corner sv-corner--tl"></div>
@@ -347,17 +340,16 @@
         </svg>
       </div>
 
-      <h3 class="sv-card-title">Integración API</h3>
-      <p class="sv-card-sub">REST · SDK · WEBHOOKS</p>
+      <h3 class="sv-card-title">Integración Modelos 3d</h3>
+      <p class="sv-card-sub">3DModel · Blender · Glb</p>
       <p class="sv-card-desc">
-        API REST documentada + SDKs para Android, iOS y Web.
-        Webhooks en tiempo real y soporte para sistemas legacy mediante adaptadores.
+        Integracion de modelos 3d, modelado, renderizado, animacion y implementacion en la web mediante three.js.
       </p>
 
       <div class="sv-card-tags">
-        <span class="sv-tag">REST</span>
-        <span class="sv-tag">WebSocket</span>
-        <span class="sv-tag">SDK</span>
+        <span class="sv-tag">3D</span>
+        <span class="sv-tag">RF</span>
+        <span class="sv-tag">Blender</span>
       </div>
 
       <div class="sv-card-footer">
@@ -365,7 +357,6 @@
           <span class="sv-stat-n sv-stat-n--red">99.9<small>%</small></span>
           <span class="sv-stat-l">UPTIME API</span>
         </span>
-        <button class="sv-card-btn" (click)="exploreService('api')">VER →</button>
       </div>
 
       <div class="sv-corner sv-corner--tl"></div>
@@ -429,7 +420,7 @@
           </div>
 
           <p class="sv-card-desc sv-card-desc--wide">
-            Sistema de videovigilancia potenciado con IA. Detección de intrusos,
+            Sistema de videovigilancia mediante un motor de video Streaming propio, enfocado en escalabilidad a Detección de intrusos,
             reconocimiento de matrículas, análisis forense de video y alertas
             automáticas integradas con biometría facial en tiempo real.
           </p>
@@ -458,13 +449,8 @@
           <span class="sv-tag">Multi-cámara</span>
         </div>
 
-        <button class="sv-btn-explore sv-btn-explore--red" (click)="exploreService('surveillance')">
-          <span class="sv-btn-text">EXPLORAR MÓDULO</span>
-          <span class="sv-btn-icon">
-            <svg viewBox="0 0 20 20" width="16" height="16">
-              <path d="M4 10h12M11 5l5 5-5 5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-            </svg>
-          </span>
+        <button class="sv-btn-explore sv-btn-explore--red" >
+          <span class="sv-btn-text">Video Streaming</span>
         </button>
 
       </div>

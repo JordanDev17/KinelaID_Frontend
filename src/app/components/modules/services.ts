@@ -169,6 +169,7 @@ export class Services implements AfterViewInit, OnDestroy {
     }
   }
 
+
   ngOnDestroy(): void {
     ScrollTrigger.getAll().forEach(t => t.kill());
     this.observers.forEach(o => o.disconnect());

@@ -188,7 +188,7 @@
           <span class="hm-terminal-dot hm-terminal-dot--red"></span>
           <span class="hm-terminal-dot hm-terminal-dot--amber"></span>
           <span class="hm-terminal-dot hm-terminal-dot--green"></span>
-          <span class="hm-terminal-title">kinela_system.sh</span>
+          <span class="hm-terminal-title">kinelaid_system.sh</span>
         </div>
         <div class="hm-terminal-body">
           <div class="hm-terminal-line">
@@ -260,7 +260,7 @@
           <span class="hm-title-accent">KinelaID en acción</span>
         </h2>
         <p class="hm-video-subtitle">
-          Reconocimiento facial en tiempo real · IA predictiva · Control de acceso inteligente
+          Reconocimiento facial en tiempo real · Control de acceso inteligente
         </p>
       </div>
 
@@ -287,20 +287,16 @@
           </div>
         </div>
 
-        <!-- Video teaser (autoplay, sin audio) -->
+        <!-- Video teaser -->
         <video
           #videoTeaser
           class="hm-video-el"
-          autoplay
-          muted
-          loop
-          playsinline>
-          <source src="assets/videos/kinela-teaser.mp4" type="video/mp4"/>
-          <!-- Placeholder visual si no hay video -->
+          autoplay muted loop playsinline>
+          <source src="assets/videos/Modelo3dKinela.mp4" type="video/mp4"/>
         </video>
 
-        <!-- Placeholder cuando no hay video -->
-        <div class="hm-video-placeholder">
+        <!-- Placeholder: solo visible si no cargó o hubo error -->
+        <div class="hm-video-placeholder" *ngIf="!teaserCargado">
           <svg viewBox="0 0 80 80" width="60" height="60" fill="none">
             <circle cx="40" cy="40" r="36" stroke="rgba(0,240,255,0.2)" stroke-width="1"/>
             <circle cx="40" cy="40" r="20" stroke="rgba(0,240,255,0.15)" stroke-width="1" stroke-dasharray="4 3"/>
@@ -310,7 +306,7 @@
             <line x1="4" y1="40" x2="16" y2="40" stroke="rgba(0,240,255,0.3)" stroke-width="1"/>
             <line x1="64" y1="40" x2="76" y2="40" stroke="rgba(0,240,255,0.3)" stroke-width="1"/>
           </svg>
-          <span>Agrega tu video en <code>assets/videos/kinela-teaser.mp4</code></span>
+          <span>Cargando demo...</span>
         </div>
 
         <!-- Botón de demo completa -->
@@ -318,10 +314,14 @@
           <span class="hm-btn-demo-icon">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
               <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
-              <path d="M9.5 8l7 4-7 4V8z" fill="currentColor"/>
+              <!-- Cubo 3D en lugar del triángulo de play -->
+              <path d="M12 7l4 2.3v4.7L12 16.3 8 14V9.3z"
+                    stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+              <path d="M12 16.3V12M12 12L8 9.7M12 12l4-2.3"
+                    stroke="currentColor" stroke-width="1.2"/>
             </svg>
           </span>
-          <span>VER DEMO COMPLETA</span>
+          <span>VER PROTOTIPO 3D</span>
           <span class="hm-btn-demo-arrow">→</span>
         </button>
 
@@ -359,7 +359,7 @@
           <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3">
             <path d="M10 2l2 6h6l-5 3.5 2 6L10 14l-5 3.5 2-6L2 8h6z"/>
           </svg>
-          IA PREDICTIVA
+          MODELADO 3D 
         </div>
       </div>
 
@@ -407,9 +407,9 @@
             <div class="hm-manifesto-line"></div>
           </div>
           <p class="hm-manifesto-text">
-            Democratizar la seguridad biométrica de grado corporativo,
-            llevando tecnología de reconocimiento facial de alta precisión
-            a empresas de todos los tamaños en Latinoamérica.
+          "Proveer soluciones de seguridad biométrica de alta precisión mediante la integración de inteligencia artificial 
+          y hardware IoT, permitiendo que empresas y comunidades en Latinoamérica 
+          gestionen sus accesos de forma inteligente, segura y eficiente."
           </p>
         </div>
 
@@ -419,9 +419,8 @@
             <div class="hm-manifesto-line"></div>
           </div>
           <p class="hm-manifesto-text">
-            Ser la infraestructura de identidad digital más confiable
-            de la región, donde cada acceso sea una experiencia
-            fluida, segura e inteligente.
+          "Ser la infraestructura de identidad digital más confiable y avanzada de la región para el año 2030, 
+          liderando la transición hacia entornos automatizados donde el acceso sea una experiencia invisible, fluida y universalmente segura.""
           </p>
         </div>
 
@@ -429,14 +428,13 @@
         <div class="hm-tech-stack">
           <span class="hm-tech-label">TECH_STACK</span>
           <div class="hm-tech-tags">
+            <span class="hm-tech-tag">Javascript</span>
+            <span class="hm-tech-tag">Python</span>
+            <span class="hm-tech-tag">Django</span>
+            <span class="hm-tech-tag">Node.js</span>
             <span class="hm-tech-tag">Angular</span>
             <span class="hm-tech-tag">Three.js</span>
-            <span class="hm-tech-tag">TensorFlow</span>
-            <span class="hm-tech-tag">Node.js</span>
-            <span class="hm-tech-tag">MediaPipe</span>
-            <span class="hm-tech-tag">OpenCV</span>
-            <span class="hm-tech-tag">Django</span>
-            <span class="hm-tech-tag">PostgreSQL</span>
+            <span class="hm-tech-tag">Blender</span>
           </div>
         </div>
 
@@ -459,11 +457,12 @@
             </div>
           </div>
           <div class="hm-tl-content">
-            <span class="hm-tl-year">2021</span>
+            <span class="hm-tl-year">2025</span>
             <h4 class="hm-tl-title">Fundación</h4>
             <p class="hm-tl-desc">
               Nace Kinela en Mosquera, Cundinamarca.
-              Primeras pruebas de reconocimiento facial con MediaPipe.
+              Viene de la necesidad de ofrecer un nuevo servicio totalmente automatizado, enfocandose en software de alta calidad junto con integracions de hardware, 
+              manejando en primera prioridad el diseño diferencial y la total atencion a la experiencia de usuario.
             </p>
           </div>
         </div>
@@ -481,11 +480,11 @@
             </div>
           </div>
           <div class="hm-tl-content">
-            <span class="hm-tl-year">2022</span>
+            <span class="hm-tl-year">2025</span>
             <h4 class="hm-tl-title">Primer Despliegue</h4>
             <p class="hm-tl-desc">
-              Sistema de control de acceso biométrico instalado
-              en cliente piloto. 500+ empleados gestionados.
+              El primer despliegue en KINELA fue un software de Marketing y visibilidad para un parque industrial, agregandole un portal moderno totalmente plagado de elementos interactivos para la experiencia de usuario,
+              implementando Street View 360°, Chat Bot, Prediccion del clima a nivel mundial y mas objetos que hacen un software de primer nivel.
             </p>
           </div>
         </div>
@@ -506,11 +505,10 @@
             </div>
           </div>
           <div class="hm-tl-content">
-            <span class="hm-tl-year">2023</span>
-            <h4 class="hm-tl-title">Motor de IA Propio</h4>
+            <span class="hm-tl-year">2026</span>
+            <h4 class="hm-tl-title">Motor de IA y video Streaming Propio</h4>
             <p class="hm-tl-desc">
-              Desarrollo del motor de reconocimiento con 468 landmarks.
-              Precisión alcanza 99.7% en condiciones reales.
+              Desarrollo del motor de reconocimiento en django mediante las librerias de reconocimiento facial, junto con un sistema de video streaming para poder monitorear las camaras del sistema.
             </p>
           </div>
         </div>
@@ -528,11 +526,13 @@
             </div>
           </div>
           <div class="hm-tl-content">
-            <span class="hm-tl-year">2024 →</span>
-            <h4 class="hm-tl-title">KinelaID Platform</h4>
+            <span class="hm-tl-year">2026</span>
+            <h4 class="hm-tl-title">Modelos 3D</h4>
             <p class="hm-tl-desc">
-              Lanzamiento de la plataforma completa: facial, huella,
-              analítica de personas, API pública y vigilancia IA.
+              Desarrollamos una interfaz de vanguardia mediante el modelado e implementación de activos .glb optimizados. Desde un busto digital interactivo en el 
+              Hero que reacciona al usuario,
+               hasta la simulación técnica de la maqueta física, cada elemento ha sido diseñado en Three.js para fusionar el diseño 3D de alta 
+               fidelidad con el rendimiento web, creando una representación visual exacta de nuestra ingeniería biométrica.
             </p>
           </div>
         </div>
@@ -544,7 +544,7 @@
     <!-- Banda de métricas grandes -->
     <div class="hm-metrics-band">
       <div class="hm-metric-big">
-        <span class="hm-metric-n"><span class="hm-count" data-count="1000000">0</span><small>+</small></span>
+        <span class="hm-metric-n"><span class="hm-count" data-count="1000">0</span><small>+</small></span>
         <span class="hm-metric-l">IDENTIDADES REGISTRADAS</span>
       </div>
       <div class="hm-metric-sep"></div>
@@ -554,7 +554,7 @@
       </div>
       <div class="hm-metric-sep"></div>
       <div class="hm-metric-big">
-        <span class="hm-metric-n"><span class="hm-count" data-count="3">0</span></span>
+        <span class="hm-metric-n"><span class="hm-count" data-count="1">0</span></span>
         <span class="hm-metric-l">AÑOS EN PRODUCCIÓN</span>
       </div>
       <div class="hm-metric-sep"></div>
@@ -602,45 +602,89 @@
   <section class="hm-contact-section relative min-h-screen z-20 flex items-center justify-center">
     <app-contact class="w-full"></app-contact>
   </section>
+  <!-- ══════════════════════════════
+     FOOTER — KINELA SYSTEM
+══════════════════════════════ -->
+<footer class="hm-footer relative z-20">
+
+  <!-- Línea superior con partícula -->
+  <div class="hm-footer-line">
+    <div class="hm-footer-line-track">
+      <div class="hm-footer-line-particle"></div>
+    </div>
+  </div>
+
+  <div class="hm-footer-inner">
+
+    <!-- Logo -->
+    <div class="hm-footer-logo">
+      <div class="hm-footer-logo-mark">
+        <svg viewBox="0 0 32 32" width="22" height="22">
+          <circle cx="16" cy="16" r="13" fill="none" stroke="#00f0ff" stroke-width="1" opacity="0.3"/>
+          <circle cx="16" cy="16" r="7.5" fill="none" stroke="#00f0ff" stroke-width="1.3"/>
+          <circle cx="16" cy="16" r="2.5" fill="#00f0ff"/>
+          <line x1="16" y1="3"  x2="16" y2="8.5"  stroke="#00f0ff" stroke-width="1.3" opacity="0.5"/>
+          <line x1="16" y1="23.5" x2="16" y2="29" stroke="#00f0ff" stroke-width="1.3" opacity="0.5"/>
+          <line x1="3"  y1="16" x2="8.5" y2="16" stroke="#00f0ff" stroke-width="1.3" opacity="0.5"/>
+          <line x1="23.5" y1="16" x2="29" y2="16" stroke="#00f0ff" stroke-width="1.3" opacity="0.5"/>
+        </svg>
+      </div>
+      <div class="hm-footer-logo-text">
+        <span class="hm-footer-logo-main">KINELA<span>ID</span></span>
+        <span class="hm-footer-logo-sub">BIOMETRIC SECURITY PLATFORM · v1.0</span>
+      </div>
+    </div>
+
+    <!-- Centro: info sistema -->
+    <div class="hm-footer-center">
+      <div class="hm-footer-status">
+        <span class="hm-footer-status-pip"></span>
+        <span>TODOS LOS SISTEMAS OPERACIONALES</span>
+      </div>
+      <div class="hm-footer-meta">
+        <span>MOSQUERA · CUNDINAMARCA · CO</span>
+        <span class="hm-footer-meta-sep">·</span>
+        <span>KINELA FUTURE TECH © 2026</span>
+      </div>
+    </div>
+
+    <!-- Botón volver al hero 
+    <button class="hm-footer-top hidden"  (click)="scrollToTop()" aria-label="Volver al inicio">
+      <div class="hm-footer-top-ring"></div>
+      <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M10 15V5M5 10l5-5 5 5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>INICIO</span>
+    </button>-->
+
+  </div>
+
+  <!-- Scan line del footer -->
+  <div class="hm-footer-scan" aria-hidden="true"></div>
+
+</footer>
+
 
 </div>
 
 <!-- ══════════════════════════════
-     MODAL VIDEO COMPLETO
+     MODAL PROTOTIPO 3D
 ══════════════════════════════ -->
-<div class="hm-video-modal" [class.hm-video-modal--open]="videoModalOpen" (click)="closeVideoModal()">
-  <div class="hm-modal-inner" (click)="$event.stopPropagation()">
-
-    <!-- Header del modal -->
-    <div class="hm-modal-header">
-      <div class="hm-modal-title-wrap">
-        <span class="hm-modal-eyebrow">KINELA FUTURE TECH · DEMO</span>
-        <h3 class="hm-modal-title">KinelaID en acción</h3>
-      </div>
-      <button class="hm-modal-close" (click)="closeVideoModal()">
-        <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M4 4l12 12M16 4L4 16" stroke-linecap="round"/>
-        </svg>
-      </button>
-    </div>
-
-    <!-- Esquinas del modal -->
-    <div class="hm-reticle hm-reticle--tl"></div>
-    <div class="hm-reticle hm-reticle--tr"></div>
-    <div class="hm-reticle hm-reticle--bl"></div>
-    <div class="hm-reticle hm-reticle--br"></div>
-
-    <!-- Video -->
-    <div class="hm-modal-video-wrap">
-      <video
-        #videoFull
-        class="hm-modal-video"
-        controls
-        [autoplay]="videoModalOpen"
-        playsinline>
-        <source src="assets/videos/kinela-demo.mp4" type="video/mp4"/>
-      </video>
-    </div>
-
+<div class="hm-video-modal hm-model-modal"
+     [class.hm-video-modal--open]="videoModalOpen"
+     (click)="closeVideoModal()">
+ 
+  <div class="hm-modal-inner hm-modal-inner--3d"
+       (click)="$event.stopPropagation()">
+ 
+    <!--
+      [active]="videoModalOpen"  →  Three.js solo arranca cuando el modal abre.
+      (closeModal)               →  El botón X del visor cierra el modal.
+    -->
+    <app-prototipo
+      [active]="videoModalOpen"
+      (closeModal)="closeVideoModal()">
+    </app-prototipo>
+ 
   </div>
 </div>

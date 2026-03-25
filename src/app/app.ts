@@ -5,11 +5,12 @@ import { Registros } from './components/registros/registros';
 import { Background } from './services/background';
 import { Footer } from './components/footer/footer/footer';
 import { filter } from 'rxjs/operators';
+import { Prototipo } from "./components/prototipo/prototipo";
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, CommonModule, Footer],
+  imports: [RouterOutlet, CommonModule, Footer, Prototipo],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
