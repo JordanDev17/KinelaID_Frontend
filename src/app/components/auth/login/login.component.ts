@@ -18,7 +18,7 @@ import { CommonModule }  from '@angular/common';
 import { FormsModule }   from '@angular/forms';
 import { AuthService }   from '../../../services/auth.service';
 import { Router }        from '@angular/router';
-import { HttpClient }    from '@angular/common/http';
+import { HttpClient, HttpHeaders }    from '@angular/common/http';
 import { catchError }    from 'rxjs/operators';
 import { of }            from 'rxjs';
 import { gsap }          from 'gsap';
@@ -63,7 +63,14 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   tempUserId:  number | null = null;
 
   /* ── camera_hub ── */
-  private readonly API  = 'http://127.0.0.1:8000/api';
+/* ── CONFIGURACIÓN NGROK ── */
+  private readonly DOMAIN = 'zahra-gratifiable-tediously.ngrok-free.dev';
+  private readonly API = `https://${this.DOMAIN}/api`;
+  
+  // Headers necesarios para saltar la advertencia de ngrok
+  private readonly ngrokHeaders = new HttpHeaders({
+    'ngrok-skip-browser-warning': 'true'
+  });
   camaras:       Camara[] = [];
   selectedCamId: number   = -1;
 
@@ -94,16 +101,17 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   ════════════════════════════════════════════════════ */
 
   ngOnInit(): void {
-    this.http.get<Camara[]>(`${this.API}/cameras/`)
-      .pipe(catchError(() => of([])))
-      .subscribe((cams: Camara[]) => {
-        this.camaras = cams.filter(c => c.is_activa);
-        if (this.camaras.length > 0) {
-          this.selectedCamId = this.camaras[0].id;
-        }
-        this.cdr.detectChanges();
-      });
-  }
+      // Petición inicial con headers de bypass para ngrok
+      this.http.get<Camara[]>(`${this.API}/cameras/`, { headers: this.ngrokHeaders })
+        .pipe(catchError(() => of([])))
+        .subscribe((cams: Camara[]) => {
+          this.camaras = cams.filter(c => c.is_activa);
+          if (this.camaras.length > 0) {
+            this.selectedCamId = this.camaras[0].id;
+          }
+          this.cdr.detectChanges();
+        });
+    }
 
   ngAfterViewInit(): void {
     this.initCursor();
@@ -311,7 +319,10 @@ private runIntro(): void {
   buildPreviewUrl(camId: number): string {
     const cam = this.camaras.find(c => c.id === camId);
     if (!cam) return '';
-    return `http://127.0.0.1:8000/api${cam.stream_url}`;
+    
+    // Añadimos el parámetro query '?ngrok-skip-browser-warning=true' 
+    // para que ngrok deje pasar el flujo de video directamente.
+    return `${this.API}${cam.stream_url}?ngrok-skip-browser-warning=true`;
   }
 
   get hwIdx(): number {
@@ -360,36 +371,34 @@ private runIntro(): void {
   }
 
   private async capturarViaSnapshot(): Promise<void> {
-    const url = `${this.API}/cameras/capture/${this.hwIdx}/`;
+      const hwIdx = this.camaras.find(c => c.id === this.selectedCamId)?.hardware_index ?? 0;
+      const url = `${this.API}/cameras/capture/${hwIdx}/`;
 
-    try {
-      const res = await fetch(url, { mode: 'cors' });
+      try {
+        // Fetch con headers de bypass
+        const res = await fetch(url, { 
+          mode: 'cors',
+          headers: {
+            'ngrok-skip-browser-warning': 'true'
+          }
+        });
 
-      if (!res.ok) {
-        console.warn(`[KinelaID] /cameras/capture/ → ${res.status}. Fallback a cámara local.`);
-        this.capturando  = false;
+        if (!res.ok) throw new Error('Error en captura');
+
+        const blob = await res.blob();
+        this.fotoBase64 = await this.blobToBase64(blob);
+        this.fotoCapturada = true;
+        this.capturando = false;
+        this.cdr.detectChanges();
+
+      } catch (err) {
+        console.warn('[KinelaID] Fallback a cámara local:', err);
+        this.capturando = false;
         this.modoCaptura = 'local';
         this.cdr.detectChanges();
         await this.iniciarCamaraLocal();
-        return;
       }
-
-      const blob   = await res.blob();
-      const base64 = await this.blobToBase64(blob);
-
-      this.fotoBase64    = base64;
-      this.fotoCapturada = true;
-      this.capturando    = false;
-      this.cdr.detectChanges();
-
-    } catch (err) {
-      console.warn('[KinelaID] fetch snapshot falló → fallback local:', err);
-      this.capturando  = false;
-      this.modoCaptura = 'local';
-      this.cdr.detectChanges();
-      await this.iniciarCamaraLocal();
     }
-  }
 
   private blobToBase64(blob: Blob): Promise<string> {
     return new Promise((resolve, reject) => {
