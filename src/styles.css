@@ -362,6 +362,12 @@ body::-webkit-scrollbar {
   width: 10px;
 }
 
+/* En móvil ocultamos el scrollbar  */
+@media (max-width: 768px) {
+  body::-webkit-scrollbar { width: 0px; display: none; }
+  body { scrollbar-width: none; -ms-overflow-style: none; }
+}
+
 body::-webkit-scrollbar-track {
   background: #0a0e27;
 }
@@ -541,4 +547,29 @@ body::-webkit-scrollbar-thumb:hover {
 .leaflet-marker-icon,
 .leaflet-marker-shadow {
   pointer-events: auto !important;
+}
+
+/* ── Fix overflow móvil global ── */
+@media (max-width: 768px) {
+  /* Cualquier elemento fixed o absolute que desborde
+     queda contenido en el viewport */
+  body {
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* El panel de métricas del contact necesita estar
+     contenido — el border-right del último contador
+     puede salirse del grid */
+  .ck-panel--metrics {
+    overflow: hidden;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .ck-counters {
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
 }

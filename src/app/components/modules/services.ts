@@ -38,6 +38,14 @@ export class Services implements AfterViewInit, OnDestroy {
     const el = this.section?.nativeElement;
     if (!el) return;
 
+    // En móvil los ScrollTriggers de gsap.from() dejan elementos
+    // en opacity:0 si no se disparan — mostramos todo directamente
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+      this.initAnimationsMobile(el);
+      return;
+    }
+
     /* ── 1. Título con SplitType ── */
     const titleLines = el.querySelectorAll<HTMLElement>('.sv-ht-line');
     titleLines.forEach(line => {
@@ -127,6 +135,43 @@ export class Services implements AfterViewInit, OnDestroy {
       scrollTrigger: { trigger: '.sv-cta', start: 'top 90%', once: true }
     });
   }
+  
+  private initAnimationsMobile(el: HTMLElement): void {
+  // En móvil usamos IntersectionObserver nativo — no depende de
+  // cálculos de posición de GSAP que fallan en Safari/Chrome móvil
+  const targets = el.querySelectorAll(
+    '.sv-header-eyebrow, .sv-header-desc, .sv-rule-fill, .sv-featured, .sv-card, .sv-cta, .sv-cta-line, .sv-ht-line'
+  );
+
+  // Garantizamos que todo sea visible por defecto
+  targets.forEach(t => {
+    (t as HTMLElement).style.opacity = '1';
+    (t as HTMLElement).style.transform = 'none';
+  });
+
+  // Fade-in suave al entrar al viewport
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          gsap.fromTo(entry.target,
+            { opacity: 0, y: 20 },
+            { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out', clearProps: 'all' }
+          );
+          observer.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
+  );
+
+  targets.forEach(t => {
+    (t as HTMLElement).style.opacity = '0';
+    observer.observe(t);
+  });
+
+  this.observers.push(observer);
+}
 
   /* ── Hover handlers (GSAP micro-interactions) ── */
   onCardHover(id: string): void {

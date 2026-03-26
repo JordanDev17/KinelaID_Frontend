@@ -222,7 +222,7 @@ export class Prototipo implements AfterViewInit, OnChanges, OnDestroy {
     loader.setMeshoptDecoder(MeshoptDecoder);
 
     loader.load(
-      'assets/models/prototipo_escena.glb',
+      'assets/models/prototipo_escenas.glb',
       (gltf) => this.onModelLoaded(gltf),
       (xhr: ProgressEvent) => {
         if (xhr.total > 0) {
@@ -357,9 +357,13 @@ export class Prototipo implements AfterViewInit, OnChanges, OnDestroy {
 
   private animate = (): void => {
     this.animFrameId = requestAnimationFrame(this.animate);
+    
+    // Guard: si el renderer o controls no están listos aún, salimos
+    if (!this.renderer || !this.controls) return;
+    
     const delta   = this.clock.getDelta();
     const elapsed = this.clock.elapsedTime;
-
+    
     this.animationMixer?.update(delta);
 
     // Pulso suave en las luces cenitales — ciclo lento para no distraer

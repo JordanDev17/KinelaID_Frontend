@@ -113,7 +113,7 @@ public techPoints: TechPoint[] = [
   private initMap(): void {
     if (this.map) return;
 
-    const initialCoords: L.LatLngTuple = [4.7059, -74.2302];
+    const initialCoords: L.LatLngTuple = [4.716206946669707, -74.2214449806638];
 
     this.map = L.map(this.mapContainer.nativeElement, {
       zoomControl: false,
@@ -125,6 +125,14 @@ public techPoints: TechPoint[] = [
       'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
       { maxZoom: 19 }
     ).addTo(this.map);
+
+    window.addEventListener('resize', () => {
+      this.ngZone.run(() => {
+        if (this.map) {
+          this.map.invalidateSize();
+        }
+      });
+    });
 
     this.techPoints.forEach(point => {
       const cfg = this.typeConfig[point.type];
