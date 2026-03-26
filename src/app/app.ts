@@ -1,16 +1,14 @@
 import { Component, signal, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
 import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common'; // Agregado
-import { Registros } from './components/registros/registros';
 import { Background } from './services/background';
-import { Footer } from './components/footer/footer/footer';
 import { filter } from 'rxjs/operators';
 import { Prototipo } from "./components/prototipo/prototipo";
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, CommonModule, Footer, Prototipo],
+  imports: [RouterOutlet, CommonModule, Prototipo],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
