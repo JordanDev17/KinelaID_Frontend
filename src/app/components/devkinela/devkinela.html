@@ -1,0 +1,463 @@
+<!-- ═══════════════════════════════════════════════════
+     DEV CHRONICLE — KINELAID DEVELOPMENT LOG
+     Bitácora de desarrollo del sistema biométrico
+═══════════════════════════════════════════════════ -->
+
+<section class="dc-section">
+
+  <!-- ░░ RUIDO AMBIENTAL ░░ -->
+  <div class="dc-noise" aria-hidden="true"></div>
+
+  <!-- ░░ LÍNEAS DE GRILLA DE FONDO ░░ -->
+  <div class="dc-grid-bg" aria-hidden="true">
+    <div class="dc-grid-bg__line" *ngFor="let l of gridLines"></div>
+  </div>
+
+  <!-- ░░ PARTÍCULAS FLOTANTES ░░ -->
+  <div class="dc-particles" aria-hidden="true">
+    <div class="dc-particle" *ngFor="let p of particles"
+         [style.left.%]="p.x"
+         [style.animation-delay.s]="p.delay"
+         [style.animation-duration.s]="p.duration">
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════
+       ENCABEZADO
+  ══════════════════════════════ -->
+  <div class="dc-header" #dcHeader>
+
+    <!-- Etiqueta de capítulo -->
+    <!-- FIX #1: Añadido dc-eyebrow--wrap para control de overflow en móvil -->
+    <div class="dc-eyebrow">
+      <div class="dc-eyebrow__bracket dc-eyebrow__bracket--l">
+        <span></span><span></span>
+      </div>
+      <span class="dc-eyebrow__id">03.5</span>
+      <div class="dc-eyebrow__sep"></div>
+      <span class="dc-eyebrow__label">DEV_CHRONICLE</span>
+      <div class="dc-eyebrow__sep"></div>
+      <span class="dc-eyebrow__status">
+        <span class="dc-eyebrow__pip"></span>
+        ACTIVE
+      </span>
+      <div class="dc-eyebrow__bracket dc-eyebrow__bracket--r">
+        <span></span><span></span>
+      </div>
+    </div>
+
+    <!-- Título con glitch -->
+    <div class="dc-title-wrap">
+      <h2 class="dc-title" [attr.data-text]="'BITÁCORA DE'">
+        <span class="dc-title__ghost" aria-hidden="true">BITÁCORA DE</span>
+        BITÁCORA DE
+      </h2>
+      <h2 class="dc-title dc-title--accent" [attr.data-text]="'DESARROLLO'">
+        <span class="dc-title__ghost" aria-hidden="true">DESARROLLO</span>
+        DESARROLLO
+      </h2>
+    </div>
+
+    <!-- Descriptor -->
+    <!-- FIX #3: Las líneas decorativas se ocultan en móvil vía CSS -->
+    <p class="dc-descriptor">
+      <span class="dc-descriptor__line" aria-hidden="true"></span>
+      Registros del proceso de construcción de KinelaID: motor IA, hardware,
+      modelado 3D e interfaz de producto
+      <span class="dc-descriptor__line" aria-hidden="true"></span>
+    </p>
+
+    <!-- HUD de estadísticas del header -->
+    <!-- FIX #2: Eliminados dc-hud-stat__sep independientes — la separación
+         se maneja sólo con border-right en .dc-hud-stat para evitar bordes dobles -->
+    <div class="dc-hud-stats">
+      <div class="dc-hud-stat">
+        <span class="dc-hud-stat__n">{{ entries.length }}</span>
+        <span class="dc-hud-stat__l">ENTRADAS</span>
+      </div>
+      <div class="dc-hud-stat">
+        <span class="dc-hud-stat__n">{{ getYearSpan() }}</span>
+        <span class="dc-hud-stat__l">TRIMESTRES</span>
+      </div>
+      <div class="dc-hud-stat">
+        <span class="dc-hud-stat__n">4</span>
+        <span class="dc-hud-stat__l">MÓDULOS</span>
+      </div>
+      <div class="dc-hud-stat">
+        <span class="dc-hud-stat__n">v3</span>
+        <span class="dc-hud-stat__l">RELEASE</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════
+       BARRA DE FASE / TIMELINE
+  ══════════════════════════════ -->
+  <div class="dc-timeline">
+    <div class="dc-timeline__track">
+      <div class="dc-timeline__fill" [style.width.%]="timelineProgress"></div>
+    </div>
+    <div class="dc-timeline__nodes">
+      <div class="dc-timeline__node"
+           *ngFor="let phase of phases; let i = index"
+           [class.dc-timeline__node--active]="activeFilter === phase.key || activeFilter === 'all'"
+           (click)="setFilter(phase.key)">
+        <div class="dc-timeline__node-dot">
+          <svg [attr.viewBox]="'0 0 16 16'" width="16" height="16" fill="none">
+            <circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.2"/>
+            <circle cx="8" cy="8" r="2" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="dc-timeline__node-info">
+          <span class="dc-timeline__node-label">{{ phase.period }}</span>
+          <span class="dc-timeline__node-name">{{ phase.label }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════
+       FILTROS
+  ══════════════════════════════ -->
+  <!-- FIX #5: Añadido role="tablist" con scroll horizontal en CSS para móvil -->
+  <div class="dc-filters" role="tablist">
+    <button
+      *ngFor="let f of filters"
+      class="dc-filter"
+      [class.dc-filter--active]="activeFilter === f.key"
+      (click)="setFilter(f.key)"
+      role="tab"
+      [attr.aria-selected]="activeFilter === f.key">
+
+      <!-- Fondo animado de fill -->
+      <span class="dc-filter__fill"></span>
+
+      <!-- Icono SVG único por categoría -->
+      <span class="dc-filter__icon">
+        <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round">
+          <path *ngIf="f.key==='all'"      d="M2 4h12M4 8h8M6 12h4"/>
+          <path *ngIf="f.key==='ia'"       d="M3 13V3m10 0v10M8 1v14M1 8h14"/>
+          <path *ngIf="f.key==='hardware'" d="M2 5h12v6H2zM5 5V3h6v2M5 11v2h6v-2"/>
+          <path *ngIf="f.key==='3d'"       d="M8 2L2 5.5v5L8 14l6-3.5v-5zM8 2v12M2 5.5l6 3.5 6-3.5"/>
+          <path *ngIf="f.key==='ui'"       d="M1 3h14v10H1zM4 3v10M1 7h13"/>
+        </svg>
+      </span>
+
+      <span class="dc-filter__label">{{ f.label }}</span>
+
+      <!-- Contador de entradas por filtro -->
+      <span class="dc-filter__count">
+        {{ getFilterCount(f.key) }}
+      </span>
+    </button>
+  </div>
+
+  <!-- ══════════════════════════════
+       GRID DE REGISTROS
+  ══════════════════════════════ -->
+  <div class="dc-grid">
+
+    <div
+      *ngFor="let entry of filtered; let i = index"
+      class="dc-card"
+      [class.dc-card--wide]="entry.wide"
+      [class.dc-card--visible]="visibleCards.has(entry.id)"
+      [style.--card-index]="i"
+      [attr.data-category]="entry.category"
+      (click)="openLightbox(entry)"
+      tabindex="0"
+      (keydown.enter)="openLightbox(entry)"
+      [attr.aria-label]="'Ver registro: ' + entry.title">
+
+      <!-- Shimmer holográfico en hover -->
+      <div class="dc-card__shimmer" aria-hidden="true"></div>
+
+      <!-- ── IMAGEN / VISUAL ── -->
+      <div class="dc-card__visual">
+
+        <!-- Imagen real (si existe) -->
+        <img [src]="entry.img"
+             [alt]="entry.title"
+             class="dc-card__img"
+             loading="lazy"
+             (load)="onImgLoad($event)"
+             (error)="onImgError($event)"/>
+
+        <!-- Overlay degradado -->
+        <div class="dc-card__veil"></div>
+
+        <!-- Scanline sweep al hover -->
+        <div class="dc-card__sweep" aria-hidden="true"></div>
+
+        <!-- Etiqueta de categoría flotante -->
+        <div class="dc-card__badge">
+          <span class="dc-card__badge-dot"></span>
+          {{ entry.tag }}
+        </div>
+
+        <!-- Reticles de esquina -->
+        <div class="dc-corner dc-corner--tl" aria-hidden="true">
+          <span></span><span></span>
+        </div>
+        <div class="dc-corner dc-corner--tr" aria-hidden="true">
+          <span></span><span></span>
+        </div>
+        <div class="dc-corner dc-corner--br" aria-hidden="true">
+          <span></span><span></span>
+        </div>
+
+        <!-- HUD inferior de imagen -->
+        <div class="dc-card__img-hud">
+          <span class="dc-card__img-hud-left">{{ entry.year }}</span>
+          <span class="dc-card__img-hud-right">KINELAID · DEV</span>
+        </div>
+
+        <!-- Icono expand en esquina -->
+        <div class="dc-card__expand" aria-hidden="true">
+          <svg viewBox="0 0 20 20" width="14" height="14" fill="none"
+               stroke="currentColor" stroke-width="1.5">
+            <path d="M3 8V3h5M17 8V3h-5M3 12v5h5M17 12v5h-5"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+
+      </div>
+
+      <!-- ── CONTENIDO ── -->
+      <div class="dc-card__body">
+
+        <!-- Línea decorativa superior -->
+        <div class="dc-card__body-line"></div>
+
+        <div class="dc-card__meta">
+          <span class="dc-card__quarter">{{ entry.year }}</span>
+          <span class="dc-card__cat-label" [attr.data-cat]="entry.category">
+            {{ getCatLabel(entry.category) }}
+          </span>
+        </div>
+
+        <h3 class="dc-card__title">{{ entry.title }}</h3>
+        <p class="dc-card__desc">{{ entry.desc }}</p>
+
+        <!-- Pie de card -->
+        <div class="dc-card__footer">
+          <span class="dc-card__read">
+            VER REGISTRO
+            <svg viewBox="0 0 16 16" width="10" height="10" fill="none"
+                 stroke="currentColor" stroke-width="1.5">
+              <path d="M3 8h10M9 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="dc-card__id">#{{ String(entry.id).padStart(3,'0') }}</span>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div><!-- /dc-grid -->
+
+  <!-- ── CONTADOR TOTAL ── -->
+  <div class="dc-tally">
+    <div class="dc-tally__left">
+      <span class="dc-tally__n">{{ filtered.length }}</span>
+      <span class="dc-tally__slash">/</span>
+      <span class="dc-tally__total">{{ entries.length }}</span>
+      <span class="dc-tally__l">REGISTROS VISIBLES</span>
+    </div>
+    <div class="dc-tally__bar">
+      <div class="dc-tally__bar-fill"
+           [style.width.%]="(filtered.length / entries.length) * 100">
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ═══════════════════════════════════════════════════
+     LIGHTBOX CINEMÁTICO
+═══════════════════════════════════════════════════ -->
+<div class="dc-lb"
+     [class.dc-lb--open]="lightboxOpen"
+     (click)="closeLightbox()"
+     role="dialog"
+     [attr.aria-modal]="lightboxOpen"
+     aria-label="Visor de registro de desarrollo">
+
+  <div class="dc-lb__inner"
+       (click)="$event.stopPropagation()"
+       *ngIf="lightboxEntry">
+
+    <!-- ── HUD SUPERIOR ── -->
+    <!-- FIX #10: Simplificado el HUD para móvil — los elementos secondary
+         se ocultan vía CSS en pantallas pequeñas -->
+    <div class="dc-lb__hud">
+
+      <div class="dc-lb__hud-left">
+        <span class="dc-lb__hud-id">
+          REG_{{ String(lightboxEntry.id).padStart(3,'0') }}
+        </span>
+        <div class="dc-lb__hud-sep"></div>
+        <span class="dc-lb__hud-tag">{{ lightboxEntry.tag }}</span>
+      </div>
+
+      <div class="dc-lb__hud-center">
+        <div class="dc-lb__progress-track">
+          <div class="dc-lb__progress-fill"
+               [style.width.%]="((lightboxIndex + 1) / filtered.length) * 100">
+          </div>
+        </div>
+        <span class="dc-lb__hud-counter">
+          {{ lightboxIndex + 1 }} <span>·</span> {{ filtered.length }}
+        </span>
+      </div>
+
+      <div class="dc-lb__hud-right">
+        <span class="dc-lb__hud-year">{{ lightboxEntry.year }}</span>
+        <div class="dc-lb__hud-sep"></div>
+        <!-- FIX: Botón close más grande para touch (mínimo 44×44px en CSS) -->
+        <button class="dc-lb__close" (click)="closeLightbox()" aria-label="Cerrar visor">
+          <svg viewBox="0 0 20 20" width="14" height="14" fill="none"
+               stroke="currentColor" stroke-width="1.5">
+            <path d="M4 4l12 12M16 4L4 16" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ── CUERPO PRINCIPAL ── -->
+    <!-- FIX #8: El visual necesita altura explícita en modo columna única -->
+    <div class="dc-lb__body">
+
+      <!-- Imagen principal -->
+      <div class="dc-lb__visual">
+        <img [src]="lightboxEntry.img"
+             [alt]="lightboxEntry.title"
+             class="dc-lb__img"
+             (error)="onImgError($event)"/>
+
+        <!-- Overlay HUD en imagen -->
+        <div class="dc-lb__img-hud">
+          <div class="dc-lb__img-hud-corner dc-lb__img-hud-corner--tl"></div>
+          <div class="dc-lb__img-hud-corner dc-lb__img-hud-corner--tr"></div>
+          <div class="dc-lb__img-hud-corner dc-lb__img-hud-corner--bl"></div>
+          <div class="dc-lb__img-hud-corner dc-lb__img-hud-corner--br"></div>
+          <div class="dc-lb__scan-bar"></div>
+          <div class="dc-lb__img-label">{{ lightboxEntry.tag }} · ARCHIVO VISUAL</div>
+        </div>
+
+        <!-- Placeholder si no hay imagen -->
+        <div class="dc-lb__placeholder">
+          <svg viewBox="0 0 64 64" width="56" height="56" fill="none">
+            <circle cx="32" cy="32" r="28" stroke="#00f0ff" stroke-width="0.8" opacity=".3"/>
+            <circle cx="32" cy="32" r="16" stroke="#00f0ff" stroke-width="0.8" stroke-dasharray="3 2" opacity=".4"/>
+            <circle cx="32" cy="32" r="4"  fill="#00f0ff" opacity=".6"/>
+            <line x1="32" y1="4"  x2="32" y2="14" stroke="#00f0ff" stroke-width="1" opacity=".3"/>
+            <line x1="32" y1="50" x2="32" y2="60" stroke="#00f0ff" stroke-width="1" opacity=".3"/>
+            <line x1="4"  y1="32" x2="14" y2="32" stroke="#00f0ff" stroke-width="1" opacity=".3"/>
+            <line x1="50" y1="32" x2="60" y2="32" stroke="#00f0ff" stroke-width="1" opacity=".3"/>
+          </svg>
+          <span>{{ lightboxEntry.tag }}</span>
+        </div>
+      </div>
+
+      <!-- Panel de información -->
+      <div class="dc-lb__info">
+
+        <div class="dc-lb__info-header">
+          <span class="dc-lb__info-cat" [attr.data-cat]="lightboxEntry.category">
+            {{ getCatLabel(lightboxEntry.category) }}
+          </span>
+          <span class="dc-lb__info-year">{{ lightboxEntry.year }}</span>
+        </div>
+
+        <h3 class="dc-lb__title">{{ lightboxEntry.title }}</h3>
+
+        <div class="dc-lb__divider"></div>
+
+        <p class="dc-lb__desc">{{ lightboxEntry.desc }}</p>
+
+        <!-- Datos técnicos ficticios pero coherentes -->
+        <div class="dc-lb__meta-grid">
+          <div class="dc-lb__meta-item">
+            <span class="dc-lb__meta-key">MÓDULO</span>
+            <span class="dc-lb__meta-val">{{ lightboxEntry.tag }}</span>
+          </div>
+          <div class="dc-lb__meta-item">
+            <span class="dc-lb__meta-key">PERÍODO</span>
+            <span class="dc-lb__meta-val">{{ lightboxEntry.year }}</span>
+          </div>
+          <div class="dc-lb__meta-item">
+            <span class="dc-lb__meta-key">REF</span>
+            <span class="dc-lb__meta-val">#{{ String(lightboxEntry.id).padStart(3,'0') }}</span>
+          </div>
+          <div class="dc-lb__meta-item">
+            <span class="dc-lb__meta-key">STATUS</span>
+            <span class="dc-lb__meta-val dc-lb__meta-val--ok">COMPLETADO</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ── STRIP DE MINIATURAS ── -->
+    <div class="dc-lb__strip">
+      <div class="dc-lb__strip-inner">
+        <div
+          *ngFor="let e of filtered; let i = index"
+          class="dc-lb__thumb"
+          [class.dc-lb__thumb--active]="i === lightboxIndex"
+          (click)="jumpTo(i)"
+          [attr.title]="e.title">
+          <img [src]="e.img" [alt]="e.title" (error)="onImgError($event)"/>
+          <div class="dc-lb__thumb-overlay">
+            <span>{{ e.tag }}</span>
+          </div>
+          <div class="dc-lb__thumb-active-line"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── NAVEGACIÓN ── -->
+    <!-- FIX #12: dc-lb__dots ahora tiene max-width y overflow hidden con ellipsis dots en CSS -->
+    <div class="dc-lb__nav">
+
+      <button class="dc-lb__nav-btn dc-lb__nav-btn--prev"
+              (click)="prevEntry()"
+              [disabled]="lightboxIndex === 0 && !loopNav"
+              aria-label="Registro anterior">
+        <svg viewBox="0 0 20 20" width="16" height="16" fill="none"
+             stroke="currentColor" stroke-width="1.5">
+          <path d="M13 4l-6 6 6 6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>PREV</span>
+      </button>
+
+      <div class="dc-lb__dots">
+        <button
+          *ngFor="let e of filtered; let i = index"
+          class="dc-lb__dot"
+          [class.dc-lb__dot--active]="i === lightboxIndex"
+          (click)="jumpTo(i)"
+          [attr.aria-label]="'Ir al registro ' + (i+1)">
+        </button>
+      </div>
+
+      <button class="dc-lb__nav-btn dc-lb__nav-btn--next"
+              (click)="nextEntry()"
+              aria-label="Registro siguiente">
+        <span>NEXT</span>
+        <svg viewBox="0 0 20 20" width="16" height="16" fill="none"
+             stroke="currentColor" stroke-width="1.5">
+          <path d="M7 4l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+    </div>
+
+  </div><!-- /dc-lb__inner -->
+
+</div><!-- /dc-lb -->

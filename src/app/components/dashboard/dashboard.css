@@ -83,6 +83,8 @@
   grid-template-columns: var(--db-sb-col-w) 1fr;
 }
 
+
+
 /* ============================================================
    KEYFRAMES GLOBALES
    ============================================================ */
@@ -1600,6 +1602,64 @@
   font-weight: 700;
 }
 
+/* Botón en el Header */
+.btn-kinela-reset {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(0, 240, 255, 0.05);
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  color: #00f0ff;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-kinela-reset:hover {
+  background: rgba(0, 240, 255, 0.1);
+  border-color: rgba(0, 240, 255, 0.5);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+}
+
+.btn-kinela-reset .hud-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, #00f0ff, transparent);
+}
+
+.icon-reset { width: 14px; height: 14px; }
+.btn-kinela-reset:hover .icon-reset { transform: rotate(180deg); transition: transform 0.6s ease; }
+
+
+
+.modal-btns { display: flex; gap: 10px; margin-top: 20px; }
+.btn-cancel { flex: 1; background: transparent; border: 1px solid #444; color: #888; padding: 10px; cursor: pointer; font-size: 10px; font-weight: bold; }
+.btn-confirm { flex: 1; background: #008fa0; border: none; color: #000; padding: 10px; cursor: pointer; font-size: 10px; font-weight: bold; }
+.btn-confirm:hover { background: #00f0ff; }
+
+/* Bloquea scroll cuando el modal está abierto */
+body.modal-open {
+  overflow: hidden;
+}
+
+/* Animación del modal */
+@keyframes modalFade {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.modal-anim {
+  animation: modalFade 0.2s ease;
+}
+
 /* ============================================================
    EMPLEADOS — Cards
    ============================================================ */
@@ -3031,4 +3091,238 @@
     background: white;
     page-break-inside: avoid;
   }
+}
+
+/* ================================================================
+   PARCHES CSS — dashboard.css
+   Agrega estos bloques al final del archivo
+   ================================================================ */
+
+
+/* ── MODAL DE CONFIRMACIÓN DE RESET ─────────────────────────────── */
+
+.kinela-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 8, 20, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.15s ease;
+}
+
+.kinela-modal {
+  position: relative;
+  background: rgba(0, 12, 28, 0.97);
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  border-radius: 4px;
+  padding: 32px 36px 28px;
+  max-width: 420px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 0 40px rgba(0, 240, 255, 0.06), 0 24px 48px rgba(0,0,0,0.6);
+}
+
+.kinela-modal--reset {
+  border-color: rgba(255, 180, 0, 0.2);
+}
+
+.kinela-modal__hud-bar {
+  position: absolute;
+  top: 0;
+  left: 12%;
+  right: 12%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,180,0,0.6), transparent);
+}
+
+.kinela-modal__icon {
+  margin-bottom: 16px;
+  opacity: 0.9;
+}
+
+.kinela-modal__title {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: rgba(255, 180, 0, 0.9);
+  margin-bottom: 12px;
+}
+
+.kinela-modal__body {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.7;
+  margin-bottom: 24px;
+}
+
+.kinela-modal__actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.kinela-btn {
+  padding: 8px 20px;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  border-radius: 2px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+
+.kinela-btn--ghost {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.45);
+}
+
+.kinela-btn--ghost:hover {
+  border-color: rgba(255,255,255,0.3);
+  color: rgba(255,255,255,0.7);
+}
+
+.kinela-btn--danger {
+  background: rgba(255, 60, 60, 0.15);
+  border: 1px solid rgba(255, 60, 60, 0.4);
+  color: rgba(255, 120, 100, 1);
+  display: flex;
+  align-items: center;
+}
+
+.kinela-btn--danger:hover {
+  background: rgba(255, 60, 60, 0.25);
+  border-color: rgba(255, 60, 60, 0.6);
+}
+
+
+/* ── BARRA DE ESTADO DEL RESET ───────────────────────────────────── */
+
+.reset-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  margin-bottom: 12px;
+  border-radius: 3px;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  border: 1px solid rgba(0, 240, 255, 0.12);
+  background: rgba(0, 240, 255, 0.04);
+  color: rgba(0, 240, 255, 0.7);
+  animation: slideDown 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.reset-status-bar--ok {
+  border-color: rgba(0, 255, 136, 0.25);
+  background: rgba(0, 255, 136, 0.05);
+  color: rgba(0, 255, 136, 0.8);
+}
+
+.reset-status-bar--err {
+  border-color: rgba(255, 60, 60, 0.25);
+  background: rgba(255, 60, 60, 0.05);
+  color: rgba(255, 100, 80, 0.9);
+}
+
+.reset-status-bar--busy {
+  border-color: rgba(255, 180, 0, 0.2);
+  background: rgba(255, 180, 0, 0.04);
+  color: rgba(255, 180, 0, 0.8);
+}
+
+.reset-status-bar__msg {
+  flex: 1;
+}
+
+/* Spinner pequeño */
+.reset-spinner {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 180, 0, 0.2);
+  border-top-color: rgba(255, 180, 0, 0.9);
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+/* Barra de progreso indeterminada (polling) */
+.reset-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(255,180,0,0.1);
+  overflow: hidden;
+}
+
+.reset-progress__fill {
+  height: 100%;
+  width: 40%;
+  background: rgba(255,180,0,0.6);
+  animation: indeterminate 1.4s ease-in-out infinite;
+}
+
+
+/* ── CELDA DE CÁMARA — estado de reintento ───────────────────────── */
+
+.db-cam-offline--retry {
+  border: 1px dashed rgba(255, 180, 0, 0.2);
+  flex-direction: column;
+  gap: 6px;
+}
+
+.db-cam-offline--retry span {
+  color: rgba(255, 180, 0, 0.6);
+  font-size: 9px;
+  letter-spacing: 2px;
+}
+
+.db-cam-retry-btn {
+  margin-top: 4px;
+  padding: 4px 12px;
+  font-size: 9px;
+  letter-spacing: 1px;
+  background: transparent;
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  color: rgba(0, 240, 255, 0.6);
+  border-radius: 2px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.db-cam-retry-btn:hover {
+  border-color: rgba(0, 240, 255, 0.5);
+  color: rgba(0, 240, 255, 0.9);
+  background: rgba(0, 240, 255, 0.06);
+}
+
+
+/* ── KEYFRAMES ───────────────────────────────────────────────────── */
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes indeterminate {
+  0%   { transform: translateX(-100%); }
+  50%  { transform: translateX(150%); }
+  100% { transform: translateX(150%); }
 }

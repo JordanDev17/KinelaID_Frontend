@@ -45,6 +45,8 @@ import { HttpClient }             from '@angular/common/http';
 import { interval, Subscription, forkJoin, of } from 'rxjs';
 import { switchMap, catchError }  from 'rxjs/operators';
 
+import { environment } from '../../../environments/environment';
+
 import { AuthService }         from '../../services/auth.service';
 import { Api, RegistroAcceso } from '../../services/api';
 import gsap from 'gsap';
@@ -379,6 +381,8 @@ export class Dashboard implements OnInit, AfterViewInit, OnDestroy {
    */
   camaras:           Camara[] = [];
   isLoadingCamaras:  boolean  = false;
+  showConfirmModal: boolean = false;
+
 
   /**
    * Layout de la matriz de video.
@@ -399,7 +403,10 @@ export class Dashboard implements OnInit, AfterViewInit, OnDestroy {
 
   /* ════════ BASE URL ════════ */
 
-  private readonly BASE = 'http://127.0.0.1:8000/api';
+  private readonly BASE = environment.apiUrl;
+  private retryCount: Record<number, number> = {};
+  private readonly INITIAL_POLL_WAIT_MS = 3000;
+
 
   constructor(
     private authService: AuthService,
@@ -408,9 +415,164 @@ export class Dashboard implements OnInit, AfterViewInit, OnDestroy {
     private router:      Router,
     private cdr:         ChangeDetectorRef,
     private ngZone:      NgZone,
-    private elRef:       ElementRef
+    private elRef:       ElementRef,
   ) {}
 
+
+
+
+
+confirmarReinicio() {
+  this.showConfirmModal = true;
+  document.body.classList.add('modal-open');
+}
+
+cancelarReinicio() {
+  this.showConfirmModal = false;
+  document.body.classList.remove('modal-open');
+}
+
+
+/**
+ * Consulta GET /api/cameras/status/ repetidamente hasta que
+ * todas las cámaras activas en DB tengan thread_alive=true,
+ * o hasta agotar MAX_POLL_ATTEMPTS.
+ */
+private pollCameraStatus(): void {
+  // Primera llamada: espera mínima de 3s para que el hardware abra
+  // y el primer cap.grab() sea exitoso (has_frame = true).
+  // Llamadas siguientes: cada 2s.
+  const delay = this.pollAttempts === 0 ? this.INITIAL_POLL_WAIT_MS : 2000;
+  this.pollTimer = setTimeout(() => this._doPoll(), delay);
+}
+
+private _doPoll(): void {
+  if (this.pollAttempts >= this.MAX_POLL_ATTEMPTS) {
+    this.finalizarReset('Tiempo de espera agotado — cargando estado disponible.');
+    return;
+  }
+ 
+  this.pollAttempts++;
+  this.resetMessage = `Verificando nodos… (${this.pollAttempts}/${this.MAX_POLL_ATTEMPTS})`;
+  this.cdr.detectChanges();
+ 
+  this.http.get<Record<string, { thread_alive: boolean; has_frame: boolean; flag: boolean }>>(
+    `${this.BASE}/cameras/status/`
+  ).pipe(catchError(() => of(null)))
+  .subscribe(statusMap => {
+ 
+    if (!statusMap) {
+      // Servidor todavía no responde, reintentamos en 2s
+      this.resetMessage = `Servidor no responde, reintentando… (${this.pollAttempts})`;
+      this.cdr.detectChanges();
+      this.pollTimer = setTimeout(() => this._doPoll(), 2000);
+      return;
+    }
+ 
+    const entries = Object.values(statusMap);
+ 
+    if (entries.length === 0) {
+      // Sin cámaras activas en DB: listo trivialmente
+      this.finalizarReset('✓ Sin cámaras activas — servicio listo.');
+      return;
+    }
+ 
+    // CONDICIÓN CORRECTA:
+    // thread_alive=true → el hilo arrancó (ocurre en microsegundos, no es suficiente)
+    // has_frame=true    → OpenCV ya capturó al menos un frame real (esto tarda ~2-3s)
+    const readyCount = entries.filter(s => s.thread_alive && s.has_frame).length;
+    const totalCount = entries.length;
+    const allReady   = readyCount === totalCount;
+ 
+    if (allReady) {
+      this.finalizarReset(`✓ Todos los nodos activos (${readyCount}/${totalCount}).`);
+    } else {
+      this.resetMessage =
+        `Esperando frames… ${readyCount}/${totalCount} lista(s) ` +
+        `(${this.pollAttempts}/${this.MAX_POLL_ATTEMPTS})`;
+      this.cdr.detectChanges();
+      this.pollTimer = setTimeout(() => this._doPoll(), 2000);
+    }
+  });
+}
+
+
+/**
+ * Una vez confirmado que el backend está listo (o timeout):
+ * 1. Recarga la lista de cámaras desde la DB
+ * 2. Actualiza el cache-bust de cada cámara para forzar reconexión
+ * 3. Reactiva las cámaras que estaban activas antes del reset
+ */
+private finalizarReset(msg: string): void {
+  this.resetMessage = msg;
+ 
+  // Guardamos cuáles estaban activas antes
+  const estabanActivas = new Set(
+    this.camaras.filter(c => c.activa).map(c => c.id)
+  );
+ 
+  this.http.get<Camara[]>(`${this.BASE}/cameras/`)
+    .pipe(catchError(() => of([])))
+    .subscribe((camaras: Camara[]) => {
+      const now = Date.now();
+ 
+      this.camaras = camaras.map(c => ({
+        ...c,
+        // Reactiva solo las que estaban encendidas Y el backend confirmó
+        activa: estabanActivas.has(c.id),
+        error:  false,
+      }));
+ 
+      // Cache-bust para todas → el browser abre conexiones nuevas
+      this.camaras.forEach(c => { this.cacheBust[c.id] = now; });
+ 
+      this.resetStatus      = 'done';
+      this.isLoadingCamaras = false;
+      this.cdr.detectChanges();
+ 
+      // Limpia el badge de estado después de 4 s
+      setTimeout(() => {
+        this.resetStatus  = 'idle';
+        this.resetMessage = '';
+        this.cdr.detectChanges();
+      }, 4000);
+    });
+}
+ 
+ejecutarReinicio(): void {
+  this.showConfirmModal = false;
+  document.body.classList.remove('modal-open');
+ 
+  this.camaras.forEach(c => {
+    c.activa = false;
+    c.error  = false;
+  });
+ 
+  this.resetStatus  = 'resetting';
+  this.resetMessage = 'Enviando señal de reinicio…';
+  this.isLoadingCamaras = true;
+  this.pollAttempts = 0;
+  this.cdr.detectChanges();
+ 
+  this.http.post<{ status: string; cameras: Record<string, any> }>(
+    `${this.BASE}/cameras/reset-service/`, {}
+  ).subscribe({
+    next: () => {
+      this.resetStatus  = 'polling';
+      this.resetMessage = 'Reinicio solicitado — esperando que los nodos suban…';
+      this.cdr.detectChanges();
+      // ← CAMBIO: llama pollCameraStatus que ahora espera 3s antes del primer intento
+      this.pollCameraStatus();
+    },
+    error: (err) => {
+      this.resetStatus      = 'error';
+      this.resetMessage     = 'Error al contactar el servicio de reset.';
+      this.isLoadingCamaras = false;
+      console.error('[KinelaID] reset-service error:', err);
+      this.cdr.detectChanges();
+    }
+  });
+}
   /* ════════════════════════════════════════════════════════
      LIFECYCLE
   ════════════════════════════════════════════════════════ */
@@ -444,6 +606,8 @@ export class Dashboard implements OnInit, AfterViewInit, OnDestroy {
     this.pollSub?.unsubscribe();
     if (this.clockInt) clearInterval(this.clockInt);
     if (this.permisoSaveMsgTimer) clearTimeout(this.permisoSaveMsgTimer);
+    if (this.pollTimer) clearTimeout(this.pollTimer);
+      Object.values(this.retryTimers).forEach(t => clearTimeout(t));
   }
 
   /* ════════════════════════════════════════════════════════
@@ -554,6 +718,24 @@ export class Dashboard implements OnInit, AfterViewInit, OnDestroy {
        GET /api/cameras/          → lista de Camara registradas
        GET /api/cameras/stream/{idx}/ → M-JPEG stream
   ════════════════════════════════════════════════════════ */
+ 
+    /** Timestamp de cache-bust por cámara (se actualiza al resetear) */
+    cacheBust: Record<number, number> = {};
+
+    /** Estado de reconexión automática por cámara */
+    private retryTimers: Record<number, ReturnType<typeof setTimeout>> = {};
+
+    /** Progreso del reset: idle | resetting | polling | done | error */
+    resetStatus: 'idle' | 'resetting' | 'polling' | 'done' | 'error' = 'idle';
+
+    /** Mensaje descriptivo del estado del reset */
+    resetMessage = '';
+
+    /** Cuántos intentos de polling llevamos */
+    private pollAttempts = 0;
+    private readonly MAX_POLL_ATTEMPTS = 12;   // 12 × 2s = 24 s máximo
+    private pollTimer?: ReturnType<typeof setTimeout>;
+
 
   /**
    * Carga la lista de cámaras desde camera_hub.
@@ -593,6 +775,8 @@ export class Dashboard implements OnInit, AfterViewInit, OnDestroy {
   /** Refresca la lista de cámaras manualmente */
   refreshCamaras(): void { this.loadCamaras(); }
 
+
+  
   /**
    * Construye la URL del stream M-JPEG para una cámara.
    * El backend VideoStreamView responde en:
@@ -600,10 +784,15 @@ export class Dashboard implements OnInit, AfterViewInit, OnDestroy {
    * El browser renderiza el stream directamente con <img src="...">
    * usando el protocolo multipart/x-mixed-replace.
    */
+  /**
+   * URL del stream M-JPEG con cache-busting.
+   * El timestamp fuerza al browser a abrir una nueva conexión HTTP
+   * cada vez que se actualiza (por ejemplo, después de un reset).
+   */
   getStreamUrl(cam: Camara): string {
-    // BASE debería ser http://127.0.0.1:8000
-    // Si cam.stream_url es "/api/cameras/stream/0/", el resultado es perfecto.
-    return `${this.BASE}${cam.stream_url}`;
+    const bust = this.cacheBust[cam.id] ?? 0;
+    const base = `${this.BASE}${cam.stream_url}`;
+    return bust > 0 ? `${base}?t=${bust}` : base;
   }
 
   /**
@@ -611,7 +800,9 @@ export class Dashboard implements OnInit, AfterViewInit, OnDestroy {
    * Usado en el selector del modal de empleado.
    */
   getStreamUrlById(id: string | number): string {
-    return `${this.BASE}/cameras/stream/${id}/`;
+    const cam = this.camaras.find(c => c.id === Number(id));
+    if (!cam) return '';
+    return `${this.BASE}${cam.stream_url}`;   // usa stream_url real del backend
   }
 
   /**
@@ -645,18 +836,55 @@ export class Dashboard implements OnInit, AfterViewInit, OnDestroy {
     cam.error  = false;
     this.cdr.detectChanges();
   }
+    /**
+   * Reintento manual desde el botón "↺ REINTENTAR" de la celda.
+   * Resetea el contador de intentos y fuerza un nuevo cache-bust.
+   */
+  forceRetry(cam: Camara): void {
+    // Cancela cualquier reintento automático pendiente
+    if (this.retryTimers[cam.id]) {
+      clearTimeout(this.retryTimers[cam.id]);
+      delete this.retryTimers[cam.id];
+    }
+  
+    this.retryCount[cam.id] = 0;
+    cam.error = false;
+    this.cacheBust[cam.id] = Date.now();
+    this.cdr.detectChanges();
+  }
 
   /** Maneja el evento (error) del <img> del stream */
   onStreamError(cam: Camara): void {
     cam.error = true;
     this.cdr.detectChanges();
+  
+    const attempts = (this.retryCount[cam.id] ?? 0) + 1;
+    this.retryCount[cam.id] = attempts;
+  
+    if (attempts > 3) {
+      // Demasiados fallos: deja el error visible, el admin decide
+      console.warn(`[KinelaID] Cámara ${cam.id}: demasiados reintentos, se detiene auto-retry.`);
+      return;
+    }
+  
+    const delay = Math.min(5000 * attempts, 20000); // 5s, 10s, 20s
+  
+    // Cancela timer previo si existía
+    if (this.retryTimers[cam.id]) clearTimeout(this.retryTimers[cam.id]);
+  
+    this.retryTimers[cam.id] = setTimeout(() => {
+      if (!cam.activa) return; // Si el admin la apagó mientras esperábamos, no hacemos nada
+      cam.error = false;
+      this.cacheBust[cam.id] = Date.now(); // Nuevo timestamp → nueva URL → nueva conexión
+      this.cdr.detectChanges();
+    }, delay);
   }
 
-  /** Maneja el evento (load) del <img> — primera carga exitosa del stream */
-  onStreamLoad(cam: Camara): void {
-    cam.error = false;
-    this.cdr.detectChanges();
-  }
+onStreamLoad(cam: Camara): void {
+  cam.error = false;
+  this.retryCount[cam.id] = 0;  // Reset del contador de intentos al cargar bien
+  this.cdr.detectChanges();
+}
 
   /**
    * Activa/desactiva el modo foco en una cámara (doble click).
@@ -1104,41 +1332,26 @@ async capturarFrame(): Promise<void> {
 ════════════════════════════════════════════════════════ */
 
 private async capturarViaSnapshot(): Promise<void> {
-
-  const url = `${this.BASE}/cameras/capture/${this.camaraCaptura}/`;
+  // Resolvemos hardware_index real desde el id guardado en camaraCaptura
+  const cam = this.camaras.find(c => c.id === Number(this.camaraCaptura));
+  const hwIdx = cam?.hardware_index ?? this.camaraCaptura;
+  const url = `${this.BASE}/cameras/capture/${hwIdx}/`;
 
   try {
-
     const res = await fetch(url, { mode: 'cors' });
-
-    if (!res.ok) {
-
-      throw new Error(`Snapshot error ${res.status}`);
-
-    }
+    if (!res.ok) throw new Error(`Snapshot error ${res.status}`);
 
     const blob = await res.blob();
-
     const base64 = await this.blobToBase64(blob);
 
-    this.fotoBase64 = base64;
-
+    this.fotoBase64    = base64;
     this.fotoCapturada = true;
-
     this.cdr.detectChanges();
-
-  }
-
-  catch (err) {
-
+  } catch (err) {
     console.warn('[KinelaID] Snapshot falló → fallback webcam', err);
-
     this.streamCapturaError = true;
-
     await this.iniciarWebcam();
-
   }
-
 }
 
 
@@ -1546,70 +1759,174 @@ private detenerStreamLocal(): void {
    * Genera un PDF imprimible con los datos del reporte.
    * Construye HTML completo A4 landscape y usa window.print().
    */
-  exportPDF(source?: RegistroAcceso[]): void {
-    const data = source || this.reporteData;
-    if (!data.length) { alert('Sin datos para exportar.'); return; }
+exportPDF(source?: RegistroAcceso[]): void {
+  const data = source || this.reporteData;
+  if (!data.length) { alert('Sin datos para exportar.'); return; }
 
-    const tipoLabel: Record<string,string> = {
-      general:'REPORTE GENERAL', empleado:'REPORTE POR EMPLEADO',
-      area:'REPORTE POR ÁREA',   denegados:'ACCESOS DENEGADOS',
-    };
+  const tipoLabel: Record<string, string> = {
+    general: 'REPORTE GENERAL',
+    empleado: 'REPORTE POR EMPLEADO',
+    area: 'REPORTE POR ÁREA',
+    denegados: 'ACCESOS DENEGADOS',
+  };
 
-    const rows = data.map(r => `
-      <tr>
-        <td>${r.usuario_nombre||'DESCONOCIDO'}</td>
-        <td>${r.rol_nombre||'—'}</td>
-        <td>${r.area_nombre||'—'}</td>
-        <td>${r.fecha_formateada}</td>
-        <td class="${r.permitido?'ok':'deny'}">${r.estado}</td>
-        <td>${r.motivo_denegacion||'—'}</td>
-      </tr>`).join('');
+  const rows = data.map(r => `
+    <tr>
+      <td>${r.usuario_nombre || 'DESCONOCIDO'}</td>
+      <td>${r.rol_nombre || '—'}</td>
+      <td>${r.area_nombre || '—'}</td>
+      <td>${r.fecha_formateada}</td>
+      <td class="${r.permitido ? 'ok' : 'deny'}">${r.estado}</td>
+      <td>${r.motivo_denegacion || '—'}</td>
+    </tr>`).join('');
 
-    const aprobados = data.filter(r => r.permitido).length;
-    const tasa      = data.length > 0 ? Math.round(aprobados/data.length*100) : 0;
+  const aprobados = data.filter(r => r.permitido).length;
+  const tasa = data.length > 0 ? Math.round(aprobados / data.length * 100) : 0;
 
-    const html = `<!DOCTYPE html><html lang="es">
-<head><meta charset="UTF-8"/><title>KinelaID · ${tipoLabel[this.reporteTipo]||'Reporte'}</title>
-<style>
-  @page{size:A4 landscape;margin:14mm}*{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:'Courier New',monospace;font-size:10px;color:#111}
-  .header{border-bottom:2px solid #007a99;padding-bottom:12px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-end}
-  .header h1{font-size:17px;letter-spacing:3px;color:#005f77}
-  .header p{font-size:9px;color:#666;margin-top:3px}.meta{text-align:right;font-size:9px;color:#888;line-height:1.7}
-  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
-  .kpi{border:1px solid #cce8ef;padding:10px 14px;border-left:3px solid #007a99}
-  .kpi.green{border-left-color:#006633}.kpi.red{border-left-color:#cc0033}.kpi.amber{border-left-color:#996600}
-  .kpi .n{font-size:22px;font-weight:900;color:#007a99}.kpi.green .n{color:#006633}.kpi.red .n{color:#cc0033}.kpi.amber .n{color:#996600}
-  .kpi .l{font-size:7px;letter-spacing:3px;color:#888;margin-top:2px}
-  table{width:100%;border-collapse:collapse}th{background:#007a99;color:#fff;padding:6px 8px;text-align:left;font-size:8px;letter-spacing:2px}
-  td{padding:5px 8px;border-bottom:1px solid #eee;font-size:9px}tr:nth-child(even) td{background:#f7fcfe}
-  .ok{color:#006633;font-weight:700}.deny{color:#cc0033;font-weight:700}
-  .footer{margin-top:14px;font-size:8px;color:#aaa;border-top:1px solid #eee;padding-top:8px;display:flex;justify-content:space-between}
-</style></head><body>
-<div class="header">
-  <div><h1>KINELAID · ${tipoLabel[this.reporteTipo]||'REPORTE'}</h1><p>Sistema de Control de Acceso Biométrico</p></div>
-  <div class="meta">
-    <div>Generado: ${new Date().toLocaleString('es-CO')}</div>
-    <div>Período: ${this.reporteDesde||'Inicio'} → ${this.reporteHasta||'Hoy'}</div>
-    <div>Operador: ${this.currentUser?.nombre_completo||'—'} (${this.currentUser?.rol_nombre||'—'})</div>
+  const html = `<!DOCTYPE html><html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <title>KinelaID · ${tipoLabel[this.reporteTipo] || 'Reporte'}</title>
+  <style>
+    /* ── Reset ── */
+    @page { size: A4 landscape; margin: 14mm }
+    * { margin: 0; padding: 0; box-sizing: border-box }
+    body { font-family: 'Courier New', monospace; font-size: 10px; color: #111 }
+
+    /* ── Toolbar (se oculta al imprimir) ── */
+    .toolbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 999;
+      display: flex; align-items: center; gap: 10px;
+      background: #005f77; padding: 10px 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.3);
+    }
+    .toolbar span {
+      flex: 1; color: #fff; font-size: 11px; letter-spacing: 2px; font-weight: 700;
+    }
+    .toolbar button {
+      border: none; cursor: pointer; padding: 7px 18px;
+      font-family: 'Courier New', monospace; font-size: 10px;
+      letter-spacing: 1px; font-weight: 700; border-radius: 2px;
+    }
+    .btn-print  { background: #00b4d8; color: #fff; }
+    .btn-print:hover  { background: #0096c7; }
+    .btn-close  { background: #ffffff22; color: #fff; border: 1px solid #ffffff55 !important; }
+    .btn-close:hover  { background: #ffffff33; }
+
+    /* ── Contenido ── */
+    .page { padding: 80px 24px 24px; }   /* top padding deja espacio a la toolbar */
+
+    .header {
+      border-bottom: 2px solid #007a99; padding-bottom: 12px;
+      margin-bottom: 16px; display: flex;
+      justify-content: space-between; align-items: flex-end;
+    }
+    .header h1 { font-size: 17px; letter-spacing: 3px; color: #005f77 }
+    .header p  { font-size: 9px; color: #666; margin-top: 3px }
+    .meta { text-align: right; font-size: 9px; color: #888; line-height: 1.7 }
+
+    .kpis {
+      display: grid; grid-template-columns: repeat(4,1fr);
+      gap: 12px; margin-bottom: 18px;
+    }
+    .kpi { border: 1px solid #cce8ef; padding: 10px 14px; border-left: 3px solid #007a99 }
+    .kpi.green { border-left-color: #006633 }
+    .kpi.red   { border-left-color: #cc0033 }
+    .kpi.amber { border-left-color: #996600 }
+    .kpi .n { font-size: 22px; font-weight: 900; color: #007a99 }
+    .kpi.green .n { color: #006633 }
+    .kpi.red   .n { color: #cc0033 }
+    .kpi.amber .n { color: #996600 }
+    .kpi .l { font-size: 7px; letter-spacing: 3px; color: #888; margin-top: 2px }
+
+    table { width: 100%; border-collapse: collapse }
+    th {
+      background: #007a99; color: #fff;
+      padding: 6px 8px; text-align: left;
+      font-size: 8px; letter-spacing: 2px;
+    }
+    td { padding: 5px 8px; border-bottom: 1px solid #eee; font-size: 9px }
+    tr:nth-child(even) td { background: #f7fcfe }
+    .ok   { color: #006633; font-weight: 700 }
+    .deny { color: #cc0033; font-weight: 700 }
+
+    .footer {
+      margin-top: 14px; font-size: 8px; color: #aaa;
+      border-top: 1px solid #eee; padding-top: 8px;
+      display: flex; justify-content: space-between;
+    }
+
+    /* ── Al imprimir: ocultar toolbar y quitar padding ── */
+    @media print {
+      .toolbar { display: none !important }
+      .page    { padding-top: 0 !important }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Barra de herramientas de vista previa -->
+  <div class="toolbar">
+    <span>KINELAID · VISTA PREVIA · ${tipoLabel[this.reporteTipo] || 'REPORTE'}</span>
+    <button class="btn-print" onclick="window.print()">⬇ DESCARGAR / IMPRIMIR PDF</button>
+    <button class="btn-close" onclick="window.close()">✕ CERRAR</button>
   </div>
-</div>
-<div class="kpis">
-  <div class="kpi"><div class="n">${data.length}</div><div class="l">TOTAL EVENTOS</div></div>
-  <div class="kpi green"><div class="n">${aprobados}</div><div class="l">APROBADOS</div></div>
-  <div class="kpi red"><div class="n">${data.length-aprobados}</div><div class="l">DENEGADOS</div></div>
-  <div class="kpi amber"><div class="n">${tasa}%</div><div class="l">TASA DE ÉXITO</div></div>
-</div>
-<table><thead><tr><th>EMPLEADO</th><th>ROL</th><th>ÁREA</th><th>TIMESTAMP</th><th>ESTADO</th><th>MOTIVO</th></tr></thead><tbody>${rows}</tbody></table>
-<div class="footer"><span>KinelaID · Documento confidencial</span><span>${data.length} registros</span></div>
+
+  <!-- Contenido del reporte -->
+  <div class="page">
+    <div class="header">
+      <div>
+        <h1>KINELAID · ${tipoLabel[this.reporteTipo] || 'REPORTE'}</h1>
+        <p>Sistema de Control de Acceso Biométrico</p>
+      </div>
+      <div class="meta">
+        <div>Generado: ${new Date().toLocaleString('es-CO')}</div>
+        <div>Período: ${this.reporteDesde || 'Inicio'} → ${this.reporteHasta || 'Hoy'}</div>
+        <div>Operador: ${this.currentUser?.nombre_completo || '—'} (${this.currentUser?.rol_nombre || '—'})</div>
+      </div>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi">
+        <div class="n">${data.length}</div><div class="l">TOTAL EVENTOS</div>
+      </div>
+      <div class="kpi green">
+        <div class="n">${aprobados}</div><div class="l">APROBADOS</div>
+      </div>
+      <div class="kpi red">
+        <div class="n">${data.length - aprobados}</div><div class="l">DENEGADOS</div>
+      </div>
+      <div class="kpi amber">
+        <div class="n">${tasa}%</div><div class="l">TASA DE ÉXITO</div>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>EMPLEADO</th><th>ROL</th><th>ÁREA</th>
+          <th>TIMESTAMP</th><th>ESTADO</th><th>MOTIVO</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+
+    <div class="footer">
+      <span>KinelaID · Documento confidencial</span>
+      <span>${data.length} registros</span>
+    </div>
+  </div>
+
 </body></html>`;
 
-    const win = window.open('', '_blank');
-    if (win) {
-      win.document.write(html); win.document.close(); win.focus();
-      setTimeout(() => { win.print(); win.close(); }, 600);
-    }
+  const win = window.open('', '_blank');
+  if (win) {
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    // ← Ya NO se llama win.print() automáticamente
   }
+}
 
   exportLogsAsPDF(): void { this.exportPDF(this.registrosFiltrados); }
 

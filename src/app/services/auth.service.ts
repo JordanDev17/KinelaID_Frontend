@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, BehaviorSubject, tap, map } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface AuthResponse {
   status: 'SUCCESS' | 'FACE_2FA_REQUIRED';
@@ -14,41 +15,46 @@ export interface AuthResponse {
   providedIn: 'root'
 })
 export class AuthService {
-  private baseUrl = 'http://127.0.0.1:8000/api/auth-interfaz';
+
+  private baseUrl = `${environment.apiUrl}/auth-interfaz`;
   
-  // EL BLINDAJE: Estado en memoria volátil (Private)
-  // Nadie puede acceder a esto desde la consola del navegador fácilmente
   private currentUserSubject = new BehaviorSubject<any>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
 
   constructor(private http: HttpClient) { }
 
+  // Método privado para no repetir lógica de headers
+  private get headers(): HttpHeaders {
+    let headers = new HttpHeaders();
+    if (environment.useNgrokBypass) {
+      headers = headers.set('ngrok-skip-browser-warning', 'true');
+    }
+    return headers;
+  }
+
   // PASO 1: Credenciales
   loginStepOne(credentials: any): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.baseUrl}/step-one/`, credentials).pipe(
+    return this.http.post<AuthResponse>(`${this.baseUrl}/step-one/`, credentials, { headers: this.headers }).pipe(
       tap(res => {
-        if (res.status === 'SUCCESS') {
-          this.updateUserState(res.user_data);
-        }
+        if (res.status === 'SUCCESS') this.updateUserState(res.user_data);
       })
     );
   }
 
   // PASO 2: Biometría (2FA Facial)
   loginStepTwoFace(user_id: number, foto: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.baseUrl}/step-two-face/`, { user_id, foto }).pipe(
-      tap(res => {
-        if (res.status === 'SUCCESS') {
-          this.updateUserState(res.user_data);
-        }
-      })
-    );
-  }
+      const payload = { user_id, foto };
+      return this.http.post<AuthResponse>(`${this.baseUrl}/step-two-face/`, payload, { headers: this.headers }).pipe(
+        tap(res => {
+          if (res.status === 'SUCCESS') this.updateUserState(res.user_data);
+        })
+      );
+    }
 
   // Actualiza el estado en memoria y no en texto plano expuesto
   private updateUserState(user: any) {
-    this.currentUserSubject.next(user);
-  }
+      this.currentUserSubject.next(user);
+    }
 
   // Método para obtener el valor actual de forma segura
   get userValue() {

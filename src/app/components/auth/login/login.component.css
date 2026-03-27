@@ -642,20 +642,39 @@
    PASO BIOMÉTRICO
    ============================================================ */
 
+/* ── Layout Principal ── */
 .lg-bio-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 28px;
-  align-items: start;
+  display: flex; /* Cambiamos grid por flex para mejor control móvil */
+  flex-direction: column; /* Stack vertical por defecto (Móvil) */
+  gap: 20px;
+  align-items: center;
+  width: 100%;
 }
 
-/* ── SCANNER ── */
+@media (min-width: 1024px) {
+  .lg-bio-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Volvemos al layout original en PC */
+    gap: 28px;
+    align-items: start;
+  }
+}
+
+/* ── SCANNER Adaptativo ── */
 .lg-scanner-wrap {
   position: relative;
+  width: 100%; /* Ocupa el ancho disponible en móvil */
+  max-width: 320px; /* Evitamos que se vea gigante en teléfonos grandes */
   aspect-ratio: 3 / 4;
   border: 1px solid rgba(0, 240, 255, 0.12);
   background: rgba(0, 0, 0, 0.6);
   overflow: hidden;
+}
+
+@media (min-width: 1024px) {
+  .lg-scanner-wrap {
+    max-width: none; /* En PC dejamos que el grid dicte el tamaño */
+  }
 }
 
 /* Esquinas del scanner */
@@ -891,14 +910,10 @@
 /* Barra de confianza */
 .lg-sc-confidence {
   position: absolute;
-  right: -18px;
-  top: 20px;
-  bottom: 20px;
-  width: 6px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
+  right: 8px; /* Metemos la barra dentro del marco en móvil */
+  top: 40px;
+  bottom: 40px;
+  width: 4px;
 }
 
 .lg-sc-conf-track {
@@ -933,6 +948,8 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  width: 100%; /* Asegura que los botones toquen los bordes en móvil */
+  padding-bottom: 30px; /* Margen de seguridad inferior */
 }
 
 .lg-bio-field {
@@ -1007,7 +1024,7 @@
 .lg-bio-actions {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 12px; /* Un poco más de espacio para dedos en móvil */
 }
 
 /* Meta info del frame */

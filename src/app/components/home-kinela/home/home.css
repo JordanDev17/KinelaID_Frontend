@@ -294,8 +294,98 @@ div[data-three-canvas] {
 .hm-btn-login span { position: relative; z-index: 1; }
 
 /* ============================================================
-   HERO
+   HERO- Modal Prototipo
    ============================================================ */
+ 
+/* home.css */
+
+.hm-modal-inner--3d {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px; /* Padding de seguridad */
+}
+
+.hm-mobile-warning {
+  /* Usamos clamp y max-width para responsividad total */
+  width: 90%;
+  max-width: 340px; 
+  /* Altura adaptativa al contenido */
+  height: auto; 
+  
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  
+  padding: clamp(24px, 6vw, 40px);
+  background: rgba(2, 2, 2, 0.98); /* Casi opaco */
+  border: 1px solid rgba(0, 240, 255, 0.5);
+  box-shadow: 
+    0 0 30px rgba(0, 240, 255, 0.15),
+    inset 0 0 15px rgba(0, 240, 255, 0.1);
+  border-radius: 4px; /* Un toque suave */
+  
+  /* Animación de entrada cyber */
+  animation: hm-warning-entry 0.6s ease-out forwards;
+}
+
+.hm-warning-icon {
+  font-size: clamp(28px, 8vw, 40px);
+  color: #ff00aa;
+  margin-bottom: 16px;
+  text-shadow: 0 0 15px rgba(255, 0, 170, 0.6);
+}
+
+.hm-warning-title {
+  font-size: clamp(14px, 4vw, 18px);
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: white;
+  margin-bottom: 12px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.hm-warning-text {
+  font-size: clamp(10px, 3vw, 12px);
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.6;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.hm-warning-text strong {
+  color: #00f0ff;
+  font-weight: bold;
+}
+
+.hm-btn-close-warning {
+  width: 100%; /* Botón full-width en móvil */
+  max-width: 200px;
+  padding: 12px 24px;
+  border: 1px solid #00f0ff;
+  background: rgba(0, 240, 255, 0.05);
+  color: #00f0ff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.hm-btn-close-warning:hover {
+  background: rgba(0, 240, 255, 0.15);
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+}
+
+@keyframes hm-warning-entry {
+  0% { opacity: 0; transform: scale(0.9) translateY(10px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+
 
 .hm-hero { overflow: hidden; }
 .hm-hero-inner { position: relative; z-index: 2; }

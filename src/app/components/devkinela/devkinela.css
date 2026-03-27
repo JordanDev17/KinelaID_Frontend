@@ -1,0 +1,1841 @@
+/* ═══════════════════════════════════════════════════════
+   DEVKINELA — CSS COMPLETO CON FIXES DE RESPONSIVIDAD
+   Estética: Dossier de inteligencia clasificado
+   Glassmorphism + HUD militar + efectos holográficos
+
+   CHANGELOG DE FIXES:
+   [FIX-01] .dc-eyebrow — overflow en <400px: añadido max-width, flex-wrap y overflow-x
+   [FIX-02] .dc-hud-stats — separadores dobles eliminados: solo border-right en .dc-hud-stat
+   [FIX-03] .dc-descriptor — líneas decorativas ocultas en móvil
+   [FIX-04] .dc-timeline — breakpoints intermedios mejorados (900px, 600px)
+   [FIX-05] .dc-filters — scroll horizontal en móvil con nowrap
+   [FIX-06] .dc-card--wide — aspect-ratio corregido a 16/9 en columna única
+   [FIX-07] TOUCH — hover states visibles en dispositivos táctiles (@media hover:none)
+   [FIX-08] .dc-lb__body — visual con altura explícita en modo columna única
+   [FIX-09] .dc-lb__info — max-height relajado y scroll mejorado en móvil
+   [FIX-10] .dc-lb__hud — simplificado en <480px, oculta elementos secundarios
+   [FIX-11] .dc-lb__dots — overflow controlado con max-width y scroll
+   [FIX-12] .dc-lb__nav — layout mejorado en <360px
+   [FIX-13] .dc-tally — layout corregido en <480px
+   [FIX-14] .dc-section — padding mínimo garantizado en <360px
+   [FIX-15] .dc-card__body — padding consistente en móvil
+═══════════════════════════════════════════════════════ */
+
+/* ─── VARIABLES LOCALES ─── */
+:host {
+  --cy:       #00f0ff;
+  --cy-dim:   rgba(0, 240, 255, 0.15);
+  --cy-glow:  rgba(0, 240, 255, 0.35);
+  --tl:       #007a99;
+  --tl-mid:   #005f77;
+  --border:   rgba(0, 240, 255, 0.12);
+  --border-h: rgba(0, 240, 255, 0.38);
+  --glass:    rgba(8, 16, 24, 0.55);
+  --glass-h:  rgba(10, 22, 32, 0.72);
+  --text:     rgba(255, 255, 255, 0.82);
+  --muted:    rgba(255, 255, 255, 0.35);
+  --muted-2:  rgba(255, 255, 255, 0.18);
+  --mono:     'Courier New', monospace;
+  display: block;
+}
+
+/* ═══════════════════════════════════════════════
+   SECCIÓN RAÍZ
+═══════════════════════════════════════════════ */
+.dc-section {
+  position: relative;
+  /* [FIX-14] Padding mínimo 16px garantizado en pantallas muy pequeñas */
+  padding: 96px clamp(16px, 7vw, 120px) 80px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* ─── RUIDO ─── */
+.dc-noise {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── GRILLA DE FONDO ─── */
+.dc-grid-bg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.dc-grid-bg__line {
+  flex: 1;
+  border-right: 1px solid rgba(0, 240, 255, 0.025);
+}
+
+/* ─── PARTÍCULAS ─── */
+.dc-particle {
+  position: absolute;
+  bottom: -4px;
+  width: 1px;
+  height: 1px;
+  background: var(--cy);
+  opacity: 0;
+  animation: dc-particle-rise linear infinite;
+}
+
+@keyframes dc-particle-rise {
+  0%   { transform: translateY(0);      opacity: 0; }
+  10%  { opacity: 0.5; }
+  90%  { opacity: 0.15; }
+  100% { transform: translateY(-100vh); opacity: 0; }
+}
+
+/* ═══════════════════════════════════════════════
+   HEADER
+═══════════════════════════════════════════════ */
+.dc-header {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 52px;
+}
+
+/* ─── EYEBROW ─── */
+/* [FIX-01] max-width + overflow-x:hidden + flex-wrap para evitar desbordamiento
+   en pantallas <400px donde la cadena completa no cabe en una sola línea */
+.dc-eyebrow {
+  display: inline-flex;
+  flex-wrap: wrap;           /* [FIX-01] */
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: var(--muted);
+  margin-bottom: 20px;
+  max-width: 100%;           /* [FIX-01] */
+  overflow-x: hidden;        /* [FIX-01] */
+}
+
+.dc-eyebrow__bracket {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dc-eyebrow__bracket span {
+  display: block;
+  background: var(--cy);
+  opacity: 0.5;
+}
+
+.dc-eyebrow__bracket--l span:first-child { width: 10px; height: 1px; }
+.dc-eyebrow__bracket--l span:last-child  { width: 1px;  height: 10px; }
+.dc-eyebrow__bracket--r span:first-child { width: 1px;  height: 10px; }
+.dc-eyebrow__bracket--r span:last-child  { width: 10px; height: 1px; }
+
+.dc-eyebrow__id    { color: var(--cy); font-weight: 700; }
+.dc-eyebrow__label { color: rgba(255,255,255,0.6); letter-spacing: 2px; }
+
+.dc-eyebrow__sep {
+  width: 1px;
+  height: 12px;
+  background: var(--border);
+  flex-shrink: 0;  /* [FIX-01] evitar que el sep colapse */
+}
+
+.dc-eyebrow__status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #00e57a;
+  font-size: 8px;
+  letter-spacing: 2px;
+}
+
+.dc-eyebrow__pip {
+  width: 5px;
+  height: 5px;
+  background: #00e57a;
+  border-radius: 50%;
+  box-shadow: 0 0 6px #00e57a;
+  animation: dc-pip-blink 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes dc-pip-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+/* ─── TÍTULO CON GLITCH ─── */
+.dc-title-wrap {
+  position: relative;
+  margin-bottom: 22px;
+}
+
+.dc-title {
+  font-family: var(--mono);
+  font-size: clamp(28px, 6.5vw, 72px); /* [FIX-01] min ajustado de 36→28 para <360px */
+  font-weight: 900;
+  letter-spacing: clamp(1px, 0.4vw, 4px); /* [FIX-01] letter-spacing escala con viewport */
+  color: rgba(255,255,255,0.9);
+  line-height: 1.05;
+  position: relative;
+  display: block;
+  margin: 0;
+  word-break: break-word; /* [FIX-01] evita overflow de texto en móvil */
+}
+
+.dc-title--accent {
+  color: var(--cy);
+  text-shadow: 0 0 40px rgba(0,240,255,0.3);
+}
+
+.dc-title__ghost {
+  position: absolute;
+  inset: 0;
+  color: var(--cy);
+  opacity: 0;
+  clip-path: inset(0 100% 0 0);
+  animation: dc-glitch-clip 6s steps(1) infinite;
+  pointer-events: none;
+  user-select: none;
+}
+
+@keyframes dc-glitch-clip {
+  0%, 90%   { clip-path: inset(0 100% 0 0); opacity: 0; }
+  91%        { clip-path: inset(30% 0 40% 0); opacity: 0.6; transform: translateX(-3px); }
+  92%        { clip-path: inset(60% 0 10% 0); opacity: 0.4; transform: translateX(3px); }
+  93%        { clip-path: inset(10% 0 60% 0); opacity: 0.5; transform: translateX(-2px); }
+  94%        { clip-path: inset(0 100% 0 0); opacity: 0; transform: none; }
+}
+
+/* ─── DESCRIPTOR ─── */
+.dc-descriptor {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 1.5px;
+  line-height: 1.9;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: 700px;
+  margin-bottom: 32px;
+}
+
+/* [FIX-03] Las líneas decorativas son puro adorno: se ocultan en móvil.
+   La ocultación se define en el bloque @media (max-width: 640px) */
+.dc-descriptor__line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+  flex-shrink: 0;
+  min-width: 20px; /* [FIX-03] evita que colapse en 0 cuando hay poco espacio */
+}
+
+/* ─── HUD STATS ─── */
+/*
+ * [FIX-02] CORRECCIÓN DE SEPARADORES DOBLES:
+ * El HTML original tenía divs .dc-hud-stat__sep ENTRE los .dc-hud-stat,
+ * Y el CSS tenía border-right en .dc-hud-stat. Esto creaba bordes dobles.
+ * Solución: los separadores ahora se crean SOLO con border-right en .dc-hud-stat.
+ * Los divs .dc-hud-stat__sep han sido eliminados del HTML.
+ * Se mantiene .dc-hud-stat__sep en CSS solo como fallback por si se usa en otro contexto.
+ */
+.dc-hud-stats {
+  display: inline-flex;
+  flex-wrap: wrap;            /* [FIX-02] permite wrap en pantallas pequeñas */
+  align-items: stretch;
+  border: 1px solid var(--border);
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  max-width: 100%;            /* [FIX-02] nunca desborda el contenedor */
+  overflow: hidden;
+}
+
+.dc-hud-stat {
+  padding: 10px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  border-right: 1px solid var(--border); /* [FIX-02] separador exclusivamente aquí */
+}
+
+/* [FIX-02] Último stat visible sin border-right derecha */
+.dc-hud-stat:last-child {
+  border-right: none;
+}
+
+/* Fallback: si se mantienen los separadores div en el HTML de otro componente */
+.dc-hud-stat__sep {
+  width: 1px;
+  align-self: stretch;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.dc-hud-stat__n {
+  font-family: var(--mono);
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--cy);
+  line-height: 1;
+}
+
+.dc-hud-stat__l {
+  font-family: var(--mono);
+  font-size: 7px;
+  letter-spacing: 2.5px;
+  color: var(--muted);
+  white-space: nowrap; /* [FIX-02] etiquetas no se parten */
+}
+
+/* ═══════════════════════════════════════════════
+   TIMELINE DE FASES
+═══════════════════════════════════════════════ */
+.dc-timeline {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 36px;
+}
+
+.dc-timeline__track {
+  height: 2px;
+  background: var(--border);
+  margin-bottom: 0;
+  position: relative;
+}
+
+.dc-timeline__fill {
+  position: absolute;
+  top: 0; left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--tl), var(--cy));
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 8px var(--cy-glow);
+}
+
+/* [FIX-04] overflow:hidden evita que nodos salgan del track */
+.dc-timeline__nodes {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 14px;
+  gap: 4px;          /* [FIX-04] reducido de 8→4 para caber en más pantallas */
+  overflow: hidden;  /* [FIX-04] */
+}
+
+.dc-timeline__node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;      /* [FIX-04] permite que flex items se compriman correctamente */
+  transition: opacity 0.25s;
+  opacity: 0.4;
+}
+
+.dc-timeline__node--active {
+  opacity: 1;
+}
+
+.dc-timeline__node-dot {
+  color: var(--muted);
+  transition: color 0.25s, transform 0.25s;
+  flex-shrink: 0; /* [FIX-04] el ícono nunca se comprime */
+}
+
+.dc-timeline__node--active .dc-timeline__node-dot {
+  color: var(--cy);
+  transform: scale(1.2);
+  filter: drop-shadow(0 0 4px var(--cy));
+}
+
+.dc-timeline__node-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  overflow: hidden;  /* [FIX-04] texto no desborda el nodo */
+  width: 100%;
+}
+
+.dc-timeline__node-label {
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* [FIX-04] trunca si no hay espacio */
+  max-width: 100%;
+}
+
+.dc-timeline__node-name {
+  font-family: var(--mono);
+  font-size: 7px;
+  letter-spacing: 1.5px;
+  color: var(--muted-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* [FIX-04] */
+  max-width: 100%;
+}
+
+.dc-timeline__node--active .dc-timeline__node-label {
+  color: var(--cy);
+}
+
+/* ═══════════════════════════════════════════════
+   FILTROS
+═══════════════════════════════════════════════ */
+/*
+ * [FIX-05] Los filtros en móvil se convierten en fila con scroll horizontal.
+ * Esto evita que los botones se superpongan o se corten en pantallas <400px.
+ * Se usa flex-nowrap + overflow-x:auto + scroll-snap.
+ */
+.dc-filters {
+  display: flex;
+  flex-wrap: wrap;       /* default: wrap en pantallas grandes */
+  gap: 6px;
+  margin-bottom: 40px;
+  position: relative;
+  z-index: 2;
+}
+
+.dc-filter {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--glass);
+  border: 1px solid var(--border);
+  padding: 8px 16px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: color 0.22s, border-color 0.22s;
+  backdrop-filter: blur(8px);
+  white-space: nowrap;    /* [FIX-05] botón no parte su texto */
+  flex-shrink: 0;         /* [FIX-05] botón no se comprime */
+  -webkit-tap-highlight-color: transparent; /* [FIX-07] mejora touch */
+}
+
+.dc-filter__fill {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--tl-mid), rgba(0,122,153,0.3));
+  transform: translateX(-101%);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 0;
+}
+
+.dc-filter:hover .dc-filter__fill,
+.dc-filter--active .dc-filter__fill {
+  transform: translateX(0);
+}
+
+.dc-filter:hover {
+  color: rgba(255,255,255,0.8);
+  border-color: rgba(0,240,255,0.3);
+}
+
+.dc-filter--active {
+  color: var(--cy);
+  border-color: var(--cy);
+}
+
+.dc-filter__icon,
+.dc-filter__label,
+.dc-filter__count {
+  position: relative;
+  z-index: 1;
+}
+
+.dc-filter__icon {
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  flex-shrink: 0;
+}
+
+.dc-filter--active .dc-filter__icon,
+.dc-filter:hover .dc-filter__icon { opacity: 1; }
+
+.dc-filter__count {
+  font-size: 8px;
+  opacity: 0.55;
+  background: rgba(0,240,255,0.08);
+  border: 1px solid var(--border);
+  padding: 1px 5px;
+  min-width: 18px;
+  text-align: center;
+  transition: opacity 0.2s;
+}
+
+.dc-filter--active .dc-filter__count { opacity: 1; }
+
+/* ═══════════════════════════════════════════════
+   GRID
+═══════════════════════════════════════════════ */
+.dc-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  position: relative;
+  z-index: 2;
+  margin-bottom: 32px;
+}
+
+/* ═══════════════════════════════════════════════
+   CARD — EL CORAZÓN DEL COMPONENTE
+═══════════════════════════════════════════════ */
+.dc-card {
+  position: relative;
+  background: var(--glass);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  overflow: hidden;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  /* Entrada animada */
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity      0.55s cubic-bezier(0.4, 0, 0.2, 1),
+    transform    0.55s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.28s,
+    box-shadow   0.28s;
+  transition-delay: calc(var(--card-index, 0) * 0.08s);
+
+  outline: none;
+  -webkit-tap-highlight-color: transparent; /* [FIX-07] */
+}
+
+.dc-card--wide {
+  grid-column: span 2;
+}
+
+/* Card visible (tras IntersectionObserver) */
+.dc-card--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ─── HOVER (dispositivos con puntero preciso) ─── */
+/* [FIX-07] Envuelto en @media (hover: hover) para aplicar SOLO
+   a dispositivos con hover real (mouse). En touch se usa la clase
+   .dc-card--touch-active aplicada via JS, o se muestran los elementos
+   directamente mediante las reglas @media (hover: none) más abajo. */
+@media (hover: hover) and (pointer: fine) {
+  .dc-card:hover {
+    border-color: var(--border-h);
+    box-shadow:
+      0 0 0 1px rgba(0,240,255,0.08) inset,
+      0 24px 48px rgba(0,0,0,0.5),
+      0 0 32px rgba(0,240,255,0.06);
+    transform: translateY(-4px);
+  }
+
+  .dc-card:hover .dc-card__shimmer {
+    opacity: 1;
+    animation: dc-shimmer 1.4s ease-in-out infinite;
+  }
+
+  .dc-card:hover .dc-card__img {
+    transform: scale(1.06);
+  }
+
+  .dc-card:hover .dc-card__sweep {
+    animation: dc-sweep 1.6s linear infinite;
+    opacity: 1;
+  }
+
+  .dc-card:hover .dc-card__badge {
+    border-color: rgba(0,240,255,0.55);
+  }
+
+  .dc-card:hover .dc-corner span {
+    opacity: 0.8;
+    transform: scaleX(1) scaleY(1);
+  }
+
+  .dc-card:hover .dc-card__img-hud { opacity: 1; }
+
+  .dc-card:hover .dc-card__expand {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .dc-card:hover .dc-card__body-line {
+    background: linear-gradient(90deg, var(--cy-glow), transparent);
+  }
+
+  .dc-card:hover .dc-card__cat-label {
+    border-color: rgba(0,240,255,0.28);
+    color: rgba(255,255,255,0.6);
+  }
+
+  .dc-card:hover .dc-card__title { color: #fff; }
+
+  .dc-card:hover .dc-card__read {
+    color: var(--cy);
+    gap: 8px;
+  }
+}
+
+.dc-card:focus-visible {
+  outline: 1.5px solid var(--cy);
+  outline-offset: 3px;
+}
+
+/* ─── SHIMMER HOLOGRÁFICO ─── */
+.dc-card__shimmer {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  opacity: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(0, 240, 255, 0.06) 50%,
+    transparent 70%
+  );
+  background-size: 200% 200%;
+  transition: opacity 0.3s;
+}
+
+@keyframes dc-shimmer {
+  0%   { background-position: -100% 0; }
+  100% { background-position: 300% 0; }
+}
+
+/* ─── VISUAL (IMAGEN) ─── */
+.dc-card__visual {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #070e16;
+}
+
+/* [FIX-06] dc-card--wide mantiene aspect-ratio 21/9 solo cuando
+   hay espacio para columna doble (>640px). En columna única usa 16/9. */
+.dc-card--wide .dc-card__visual {
+  aspect-ratio: 21 / 9;
+}
+
+.dc-card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0;
+  transition: transform 0.55s ease, opacity 0.4s ease;
+}
+
+/* Velo degradado */
+.dc-card__veil {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(7,14,22,0.1) 0%,
+    rgba(7,14,22,0.1) 40%,
+    rgba(7,14,22,0.75) 100%
+  );
+  z-index: 1;
+}
+
+/* ─── SWEEP (scanline en hover) ─── */
+.dc-card__sweep {
+  position: absolute;
+  top: -4px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(0,240,255,0) 10%,
+    rgba(0,240,255,0.7) 50%,
+    rgba(0,240,255,0) 90%,
+    transparent 100%
+  );
+  opacity: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+@keyframes dc-sweep {
+  0%   { top: -4px;  opacity: 0.8; }
+  80%  { opacity: 0.5; }
+  100% { top: 100%;  opacity: 0;   }
+}
+
+/* ─── BADGE DE CATEGORÍA ─── */
+.dc-card__badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--mono);
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  color: var(--cy);
+  background: rgba(4, 10, 18, 0.88);
+  border: 1px solid rgba(0,240,255,0.28);
+  padding: 3px 9px;
+  backdrop-filter: blur(6px);
+  transition: border-color 0.2s;
+  max-width: calc(100% - 20px); /* [FIX-07] badge no desborda la imagen */
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.dc-card__badge-dot {
+  width: 4px;
+  height: 4px;
+  background: var(--cy);
+  border-radius: 50%;
+  box-shadow: 0 0 5px var(--cy);
+  animation: dc-pip-blink 1.8s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+/* ─── RETICLE CORNERS ─── */
+.dc-corner {
+  position: absolute;
+  z-index: 6;
+  display: flex;
+}
+
+.dc-corner span {
+  display: block;
+  background: var(--cy);
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+/* TL */
+.dc-corner--tl { top: 9px; left: 9px; flex-direction: column; gap: 0; }
+.dc-corner--tl span:first-child { width: 14px; height: 1.5px; transform-origin: left;  transform: scaleX(0); }
+.dc-corner--tl span:last-child  { width: 1.5px; height: 14px; transform-origin: top;   transform: scaleY(0); margin-top: 0; }
+
+/* TR */
+.dc-corner--tr { top: 9px; right: 9px; flex-direction: column; align-items: flex-end; }
+.dc-corner--tr span:first-child { width: 14px; height: 1.5px; transform-origin: right; transform: scaleX(0); }
+.dc-corner--tr span:last-child  { width: 1.5px; height: 14px; transform-origin: top;   transform: scaleY(0); }
+
+/* BR */
+.dc-corner--br { bottom: 9px; right: 9px; flex-direction: column-reverse; align-items: flex-end; }
+.dc-corner--br span:first-child { width: 14px; height: 1.5px; transform-origin: right;  transform: scaleX(0); }
+.dc-corner--br span:last-child  { width: 1.5px; height: 14px; transform-origin: bottom; transform: scaleY(0); }
+
+/* ─── HUD INFERIOR EN IMAGEN ─── */
+.dc-card__img-hud {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 20px 12px 9px;
+  background: linear-gradient(to top, rgba(4,10,18,0.8) 0%, transparent 100%);
+  z-index: 4;
+  font-family: var(--mono);
+  font-size: 7px;
+  letter-spacing: 2px;
+  color: rgba(255,255,255,0.35);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+/* ─── EXPAND ICON ─── */
+.dc-card__expand {
+  position: absolute;
+  bottom: 9px;
+  right: 9px;
+  z-index: 7;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4,10,18,0.85);
+  border: 1px solid rgba(0,240,255,0.25);
+  color: var(--cy);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.3s, transform 0.3s;
+  backdrop-filter: blur(4px);
+}
+
+/* ─── CUERPO DE TEXTO ─── */
+/* [FIX-15] Padding consistente con clamp para que funcione en todos los tamaños */
+.dc-card__body {
+  padding: clamp(10px, 2vw, 14px) clamp(12px, 2.5vw, 16px) clamp(14px, 3vw, 18px);
+  position: relative;
+}
+
+.dc-card__body-line {
+  height: 1px;
+  background: linear-gradient(90deg, var(--cy-dim), transparent);
+  margin-bottom: 12px;
+  transition: background 0.3s;
+}
+
+.dc-card__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  gap: 8px;           /* [FIX-15] espacio mínimo entre elementos */
+}
+
+.dc-card__quarter {
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: var(--tl);
+  flex-shrink: 0;
+}
+
+.dc-card__cat-label {
+  font-family: var(--mono);
+  font-size: 7.5px;
+  letter-spacing: 1.5px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  background: rgba(0,240,255,0.04);
+  transition: border-color 0.2s, color 0.2s;
+  white-space: nowrap;      /* [FIX-15] etiqueta no se parte */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 55%;           /* [FIX-15] límite para no invadir el quarter */
+}
+
+.dc-card__title {
+  font-family: var(--mono);
+  font-size: clamp(11px, 1.5vw, 12.5px); /* [FIX-15] escala en pantallas pequeñas */
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: rgba(255,255,255,0.9);
+  line-height: 1.4;
+  margin-bottom: 8px;
+  transition: color 0.2s;
+  /* [FIX-15] Clamp de 2 líneas para mantener altura de card consistente */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dc-card__desc {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--muted);
+  line-height: 1.75;
+  margin-bottom: 14px;
+  /* [FIX-15] Limitar desc a 3 líneas para evitar cards de altura variable extrema */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ─── FOOTER DE CARD ─── */
+.dc-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  gap: 8px; /* [FIX-15] gap mínimo */
+}
+
+.dc-card__read {
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 2px;
+  font-weight: 700;
+  color: var(--tl);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: color 0.2s, gap 0.2s;
+  white-space: nowrap;
+}
+
+.dc-card__id {
+  font-family: var(--mono);
+  font-size: 7.5px;
+  letter-spacing: 2px;
+  color: var(--muted-2);
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════
+   TALLY / CONTADOR FINAL
+═══════════════════════════════════════════════ */
+/* [FIX-13] Refactored para funcionar en móvil sin overflow */
+.dc-tally {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap; /* [FIX-13] fallback wrap si el espacio es muy estrecho */
+}
+
+.dc-tally__left {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.dc-tally__n {
+  font-family: var(--mono);
+  font-size: clamp(20px, 4vw, 28px); /* [FIX-13] escala con viewport */
+  font-weight: 900;
+  color: var(--cy);
+  line-height: 1;
+}
+
+.dc-tally__slash {
+  font-family: var(--mono);
+  font-size: clamp(14px, 3vw, 18px);
+  color: var(--muted);
+}
+
+.dc-tally__total {
+  font-family: var(--mono);
+  font-size: clamp(14px, 3vw, 18px);
+  color: var(--muted);
+}
+
+.dc-tally__l {
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 2.5px;
+  color: var(--muted);
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
+.dc-tally__bar {
+  flex: 1;
+  min-width: 60px; /* [FIX-13] barra siempre visible */
+  height: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.dc-tally__bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--tl), var(--cy));
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 6px var(--cy-glow);
+}
+
+/* ═══════════════════════════════════════════════
+   LIGHTBOX CINEMÁTICO
+═══════════════════════════════════════════════ */
+.dc-lb {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: rgba(2, 5, 10, 0.94);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  /* [FIX-08] overscroll evita que el body haga scroll mientras el lightbox está abierto */
+  overscroll-behavior: contain;
+}
+
+.dc-lb--open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* [FIX-08] En móvil, el inner ocupa casi toda la pantalla y permite scroll interno */
+.dc-lb__inner {
+  width: min(96vw, 1000px);
+  max-height: min(92vh, 900px); /* [FIX-08] cap absoluto para pantallas muy altas */
+  background: rgba(8, 14, 22, 0.96);
+  border: 1px solid rgba(0,240,255,0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(0,240,255,0.05) inset,
+    0 40px 80px rgba(0,0,0,0.7),
+    0 0 60px rgba(0,240,255,0.05);
+  animation: dc-lb-appear 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes dc-lb-appear {
+  from { transform: scale(0.94) translateY(12px); opacity: 0; }
+  to   { transform: scale(1)    translateY(0);    opacity: 1; }
+}
+
+/* ─── HUD DEL LIGHTBOX ─── */
+/* [FIX-10] HUD simplificado con overflow:hidden + shrink controlado */
+.dc-lb__hud {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  border-bottom: 1px solid var(--border);
+  height: 42px;
+  flex-shrink: 0;
+  overflow: hidden; /* [FIX-10] el HUD no crece verticalmente */
+}
+
+.dc-lb__hud-left,
+.dc-lb__hud-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.dc-lb__hud-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0 16px;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  min-width: 0; /* [FIX-10] permite que el centro se comprima */
+}
+
+.dc-lb__hud-id {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 2.5px;
+  font-weight: 700;
+  color: var(--cy);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dc-lb__hud-tag,
+.dc-lb__hud-year {
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.dc-lb__hud-counter {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.dc-lb__hud-counter span { color: var(--cy); margin: 0 4px; }
+
+.dc-lb__hud-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.dc-lb__progress-track {
+  width: 120px;
+  max-width: 100%;  /* [FIX-10] no desborda el centro en móvil */
+  height: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.dc-lb__progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--tl), var(--cy));
+  transition: width 0.35s ease;
+}
+
+/* [FIX-10] Botón close con área mínima de 44×44px para accesibilidad táctil */
+.dc-lb__close {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;  /* [FIX-10] evita que flex comprima el botón */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dc-lb__close:hover {
+  color: var(--cy);
+  border-color: var(--cy);
+  background: rgba(0,240,255,0.05);
+}
+
+/* ─── CUERPO DEL LIGHTBOX ─── */
+/* [FIX-08] grid con min-height 0 para que los hijos puedan comprimirse */
+.dc-lb__body {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ─── VISUAL LIGHTBOX ─── */
+.dc-lb__visual {
+  position: relative;
+  background: #050c14;
+  overflow: hidden;
+  /* [FIX-08] El visual en modo columna única necesita un aspect-ratio
+     para que no colapse a 0 altura. Se aplica en @media más abajo */
+}
+
+.dc-lb__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.dc-lb__img-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Reticle corners del lightbox */
+.dc-lb__img-hud-corner {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-color: rgba(0,240,255,0.5);
+  border-style: solid;
+}
+
+.dc-lb__img-hud-corner--tl { top: 12px;    left: 12px;   border-width: 2px 0 0 2px; }
+.dc-lb__img-hud-corner--tr { top: 12px;    right: 12px;  border-width: 2px 2px 0 0; }
+.dc-lb__img-hud-corner--bl { bottom: 12px; left: 12px;   border-width: 0 0 2px 2px; }
+.dc-lb__img-hud-corner--br { bottom: 12px; right: 12px;  border-width: 0 2px 2px 0; }
+
+/* Scan bar del lightbox */
+.dc-lb__scan-bar {
+  position: absolute;
+  left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,240,255,0.45), transparent);
+  animation: dc-lb-scan 4s linear infinite;
+}
+
+@keyframes dc-lb-scan {
+  0%   { top: 0;    opacity: 0.7; }
+  90%  { opacity: 0.4; }
+  100% { top: 100%; opacity: 0;   }
+}
+
+.dc-lb__img-label {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--mono);
+  font-size: 7.5px;
+  letter-spacing: 2.5px;
+  color: rgba(0,240,255,0.5);
+  white-space: nowrap;
+}
+
+/* ─── PLACEHOLDER LIGHTBOX ─── */
+.dc-lb__placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 2.5px;
+  color: rgba(0,240,255,0.4);
+  pointer-events: none;
+}
+
+/* ─── PANEL INFO ─── */
+/* [FIX-09] Panel info con scroll y sin max-height fija en desktop */
+.dc-lb__info {
+  padding: 24px 22px;
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow-y: auto;
+  /* [FIX-09] scrollbar sutil */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,240,255,0.2) transparent;
+}
+
+.dc-lb__info::-webkit-scrollbar {
+  width: 3px;
+}
+
+.dc-lb__info::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dc-lb__info::-webkit-scrollbar-thumb {
+  background: rgba(0,240,255,0.2);
+  border-radius: 2px;
+}
+
+.dc-lb__info-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  gap: 8px; /* [FIX-09] gap para que no se superpongan en móvil */
+}
+
+.dc-lb__info-cat {
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 2px;
+  font-weight: 700;
+  color: var(--cy);
+  background: var(--cy-dim);
+  border: 1px solid rgba(0,240,255,0.2);
+  padding: 3px 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60%; /* [FIX-09] evita overflow con año */
+}
+
+.dc-lb__info-year {
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: var(--tl);
+  flex-shrink: 0;
+}
+
+.dc-lb__title {
+  font-family: var(--mono);
+  font-size: clamp(13px, 2vw, 15px); /* [FIX-09] */
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.95);
+  line-height: 1.35;
+  margin-bottom: 16px;
+  word-break: break-word; /* [FIX-09] títulos largos no desbordan */
+}
+
+.dc-lb__divider {
+  height: 1px;
+  background: linear-gradient(90deg, var(--cy-dim), transparent);
+  margin-bottom: 16px;
+}
+
+.dc-lb__desc {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.85;
+  margin-bottom: 24px;
+}
+
+/* ─── META GRID ─── */
+.dc-lb__meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  margin-top: auto;
+}
+
+.dc-lb__meta-item {
+  background: rgba(8,14,22,0.9);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dc-lb__meta-key {
+  font-family: var(--mono);
+  font-size: 7px;
+  letter-spacing: 2px;
+  color: var(--muted-2);
+}
+
+.dc-lb__meta-val {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.75);
+  word-break: break-word;
+}
+
+.dc-lb__meta-val--ok {
+  color: #00e57a;
+}
+
+/* ─── STRIP DE MINIATURAS ─── */
+.dc-lb__strip {
+  border-top: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+
+.dc-lb__strip::-webkit-scrollbar { display: none; }
+
+.dc-lb__strip-inner {
+  display: flex;
+  gap: 6px;
+  padding: 10px 14px;
+}
+
+.dc-lb__thumb {
+  position: relative;
+  width: 72px;
+  height: 44px;
+  flex-shrink: 0;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  transition: border-color 0.2s, transform 0.2s;
+  background: #050c14;
+  -webkit-tap-highlight-color: transparent; /* [FIX-07] */
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .dc-lb__thumb:hover {
+    border-color: rgba(0,240,255,0.4);
+    transform: scale(1.05);
+  }
+
+  .dc-lb__thumb:hover img,
+  .dc-lb__thumb--active img { opacity: 1; }
+
+  .dc-lb__thumb:hover .dc-lb__thumb-overlay { opacity: 1; }
+}
+
+.dc-lb__thumb--active {
+  border-color: var(--cy);
+}
+
+.dc-lb__thumb img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.dc-lb__thumb--active img { opacity: 1; }
+
+.dc-lb__thumb-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  padding: 3px 4px;
+  background: linear-gradient(to top, rgba(4,10,18,0.85), transparent);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.dc-lb__thumb-overlay span {
+  font-family: var(--mono);
+  font-size: 6px;
+  letter-spacing: 1.5px;
+  color: var(--cy);
+}
+
+.dc-lb__thumb-active-line {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--cy);
+  transform: scaleX(0);
+  transition: transform 0.25s;
+}
+
+.dc-lb__thumb--active .dc-lb__thumb-active-line {
+  transform: scaleX(1);
+}
+
+/* ─── NAVEGACIÓN DEL LIGHTBOX ─── */
+/* [FIX-11] [FIX-12] Navegación con dots controlados */
+.dc-lb__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  gap: 12px;
+  flex-shrink: 0;
+  overflow: hidden; /* [FIX-11] evita que los dots desborden */
+}
+
+.dc-lb__nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 2.5px;
+  font-weight: 700;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  padding: 8px 18px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;  /* [FIX-12] botones no se comprimen */
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dc-lb__nav-btn:hover {
+  color: var(--cy);
+  border-color: var(--cy);
+  background: var(--cy-dim);
+}
+
+.dc-lb__nav-btn--next { flex-direction: row-reverse; }
+
+/* ─── DOTS DE NAVEGACIÓN ─── */
+/* [FIX-11] Los dots tienen max-width y overflow:hidden para que
+   no rompan el layout cuando hay muchas entradas */
+.dc-lb__dots {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  flex-wrap: nowrap;   /* [FIX-11] no wrap — overflow controlado */
+  justify-content: center;
+  overflow: hidden;    /* [FIX-11] dots extra se ocultan en vez de romper */
+  min-width: 0;        /* [FIX-11] permite comprimir el contenedor */
+  max-width: 180px;    /* [FIX-11] límite absoluto de ancho de los dots */
+}
+
+.dc-lb__dot {
+  width: 6px; height: 6px;
+  min-width: 6px;       /* [FIX-11] evita compresión extrema */
+  background: var(--border);
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dc-lb__dot:hover {
+  background: rgba(0,240,255,0.4);
+  transform: scale(1.3);
+}
+
+.dc-lb__dot--active {
+  background: var(--cy);
+  box-shadow: 0 0 7px var(--cy);
+  transform: scale(1.2);
+}
+
+/* ═══════════════════════════════════════════════
+   [FIX-07] TOUCH DEVICES — @media (hover: none)
+   Elementos que en desktop se muestran al hover,
+   en dispositivos táctiles se muestran siempre
+   con opacidad reducida para no saturar la UI.
+═══════════════════════════════════════════════ */
+@media (hover: none) {
+  /* Expand icon siempre visible en touch */
+  .dc-card__expand {
+    opacity: 0.75;
+    transform: scale(0.9);
+  }
+
+  /* HUD de imagen siempre visible en touch */
+  .dc-card__img-hud {
+    opacity: 1;
+  }
+
+  /* Reticle corners visibles al 50% */
+  .dc-corner span {
+    opacity: 0.5;
+    transform: scaleX(1) scaleY(1);
+  }
+
+  /* Thumb overlay siempre semivisible */
+  .dc-lb__thumb-overlay {
+    opacity: 0.7;
+  }
+
+  /* Estado active de tap en cards */
+  .dc-card:active {
+    border-color: var(--border-h);
+    transform: scale(0.99);
+  }
+
+  /* Badge siempre a su opacity completa */
+  .dc-card__badge {
+    border-color: rgba(0,240,255,0.4);
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   BREAKPOINTS RESPONSIVOS
+═══════════════════════════════════════════════ */
+
+/* ─── TABLET GRANDE: ≤1100px ─── */
+@media (max-width: 1100px) {
+  .dc-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ─── TABLET: ≤900px ─── */
+/* [FIX-04] Nuevo breakpoint para tablet antes de móvil */
+@media (max-width: 900px) {
+  .dc-section {
+    padding-top: 72px;
+    padding-bottom: 60px;
+  }
+
+  .dc-hud-stats {
+    display: flex;
+    width: 100%;    /* [FIX-02] ancho completo en tablet */
+  }
+
+  .dc-hud-stat {
+    flex: 1;
+    padding: 8px 12px;
+  }
+
+  .dc-hud-stat__n {
+    font-size: 16px;
+  }
+
+  .dc-timeline__node-name {
+    display: none; /* [FIX-04] solo ocultar names en tablet, no todo el timeline */
+  }
+}
+
+/* ─── TABLET ESTRECHA / MÓVIL LANDSCAPE: ≤768px ─── */
+@media (max-width: 768px) {
+  .dc-hud-stats {
+    flex-wrap: wrap;
+  }
+
+  /* [FIX-02] Cuando se wrappea, el último de cada fila pierde el border-right
+     Solo funciona para 2 stats por fila (nth-child(2n)) */
+  .dc-hud-stat:nth-child(2n) {
+    border-right: none;
+  }
+
+  .dc-timeline__nodes {
+    gap: 2px;
+  }
+
+  /* Lightbox: columna única */
+  .dc-lb__body {
+    grid-template-columns: 1fr;
+    overflow-y: auto; /* [FIX-08] scroll vertical en el body completo */
+  }
+
+  /* [FIX-08] Visual con aspect-ratio explícito en columna única */
+  .dc-lb__visual {
+    aspect-ratio: 16 / 9;
+    height: auto;    /* [FIX-08] no usar height:100% sin referencia padre definida */
+    flex-shrink: 0;
+  }
+
+  /* [FIX-09] Info sin max-height fija — usa su contenido natural + scroll */
+  .dc-lb__info {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    max-height: none; /* [FIX-09] Eliminado el 240px fijo */
+    overflow-y: visible; /* [FIX-09] el body ya tiene scroll */
+  }
+}
+
+/* ─── MÓVIL: ≤640px ─── */
+@media (max-width: 640px) {
+  .dc-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* [FIX-06] Wide cards usan 16/9 en columna única */
+  .dc-card--wide {
+    grid-column: span 1;
+  }
+
+  .dc-card--wide .dc-card__visual {
+    aspect-ratio: 16 / 9; /* [FIX-06] 21/9 → 16/9 en columna única */
+  }
+
+  /* [FIX-03] Ocultar líneas decorativas del descriptor en móvil */
+  .dc-descriptor__line {
+    display: none;
+  }
+
+  .dc-descriptor {
+    gap: 0;
+    justify-content: flex-start;
+  }
+
+  /* [FIX-05] Filtros en scroll horizontal cuando no caben en una fila */
+  .dc-filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px; /* espacio para el scrollbar de touch en iOS */
+    scroll-snap-type: x mandatory;
+    gap: 6px;
+    /* Margen negativo + padding para que el scroll llegue al borde */
+    margin-left: calc(clamp(16px, 7vw, 120px) * -1);
+    margin-right: calc(clamp(16px, 7vw, 120px) * -1);
+    padding-left: clamp(16px, 7vw, 120px);
+    padding-right: clamp(16px, 7vw, 120px);
+  }
+
+  .dc-filters::-webkit-scrollbar { display: none; }
+
+  .dc-filter {
+    scroll-snap-align: start;
+    padding: 7px 12px; /* [FIX-05] padding reducido en móvil */
+    font-size: 8px;
+    letter-spacing: 1.5px;
+  }
+
+  .dc-header {
+    margin-bottom: 36px;
+  }
+
+  /* [FIX-10] Ocultar elementos secundarios del HUD en móvil */
+  .dc-lb__hud-tag,
+  .dc-lb__hud-year {
+    display: none;
+  }
+
+  /* Año en el HUD oculto → el sep que lo separa también */
+  .dc-lb__hud-right .dc-lb__hud-sep {
+    display: none;
+  }
+
+  .dc-lb__hud-left {
+    padding: 0 12px;
+  }
+
+  .dc-lb__hud-right {
+    padding: 0 12px;
+  }
+
+  .dc-lb__nav-btn {
+    padding: 8px 14px; /* [FIX-12] padding reducido */
+  }
+
+  /* [FIX-11] Dots más pequeños en móvil para caber más */
+  .dc-lb__dot {
+    width: 5px;
+    height: 5px;
+    min-width: 5px;
+  }
+
+  .dc-lb__dots {
+    max-width: 140px;
+    gap: 4px;
+  }
+
+  /* [FIX-13] Tally en móvil */
+  .dc-tally {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .dc-tally__bar {
+    width: 100%;
+    min-width: unset;
+  }
+}
+
+/* ─── MÓVIL PEQUEÑO: ≤480px ─── */
+@media (max-width: 480px) {
+  .dc-section {
+    padding-top: 56px;
+    padding-bottom: 48px;
+  }
+
+  /* [FIX-01] Eyebrow simplificado: ocultar elementos decorativos */
+  .dc-eyebrow__bracket,
+  .dc-eyebrow__label,
+  .dc-eyebrow__sep {
+    display: none;
+  }
+
+  /* Solo quedan: id + status */
+  .dc-eyebrow {
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .dc-timeline {
+    display: none; /* [FIX-04] ocultado solo en <480px, no 480-640 */
+  }
+
+  /* [FIX-10] En <480px el HUD del lightbox es mínimo */
+  .dc-lb__hud-center {
+    display: none; /* Solo quedan ID y botón close */
+  }
+
+  .dc-lb__hud-left {
+    flex: 1; /* [FIX-10] el left toma el espacio del center eliminado */
+  }
+
+  .dc-lb__inner {
+    max-height: 95vh; /* [FIX-08] más espacio en pantallas muy pequeñas */
+  }
+
+  .dc-lb__nav-btn span {
+    display: none; /* [FIX-12] texto del botón oculto, solo el ícono */
+  }
+
+  .dc-lb__nav-btn {
+    padding: 8px 12px;
+    min-width: 40px;
+    justify-content: center;
+  }
+
+  /* [FIX-12] Nav con botones más pequeños */
+  .dc-lb__nav {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .dc-hud-stat {
+    padding: 8px 10px;
+  }
+
+  .dc-hud-stat__n {
+    font-size: 14px;
+  }
+
+  .dc-hud-stat__l {
+    font-size: 6px;
+    letter-spacing: 1.5px;
+  }
+
+  .dc-lb__strip-inner {
+    padding: 8px 10px;
+  }
+}
+
+/* ─── TELÉFONOS MUY PEQUEÑOS: ≤360px ─── */
+/* [FIX-14] Ajustes para dispositivos ≤360px (Galaxy S serie antigua, iPhone SE 1gen) */
+@media (max-width: 360px) {
+  .dc-section {
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-top: 48px;
+  }
+
+  .dc-title {
+    font-size: 26px;
+    letter-spacing: 1px;
+  }
+
+  .dc-filter {
+    font-size: 7.5px;
+    padding: 6px 10px;
+  }
+
+  /* [FIX-12] Nav en teléfonos muy pequeños: 3 elementos apilados si no caben */
+  .dc-lb__nav {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .dc-lb__dots {
+    order: -1; /* Dots arriba, botones abajo */
+    max-width: 200px;
+  }
+
+  .dc-lb__thumb {
+    width: 60px;
+    height: 38px;
+  }
+
+  .dc-lb__info {
+    padding: 16px 14px;
+  }
+
+  .dc-hud-stats {
+    /* En 360px: 2 stats por fila */
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .dc-hud-stat {
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Reestablecer border en grid: quitar right de la col derecha */
+  .dc-hud-stat:nth-child(2n) {
+    border-right: none;
+  }
+
+  /* Quitar bottom de la última fila */
+  .dc-hud-stat:nth-last-child(-n+2) {
+    border-bottom: none;
+  }
+}

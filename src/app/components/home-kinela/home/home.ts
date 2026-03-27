@@ -16,12 +16,13 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Contact } from '../../modules/contact';
 import { Services } from '../../modules/services';
 import { Prototipo } from '../../prototipo/prototipo';
+import { Devkinela } from "../../devkinela/devkinela";
 
 gsap.registerPlugin(ScrollTrigger);
 
 @Component({
   selector: 'app-home',
-  imports: [CommonModule, Contact, Services, Prototipo],
+  imports: [CommonModule, Contact, Services, Prototipo, Devkinela],
   standalone: true,
   templateUrl: './home.html',
   styleUrl: './home.css',
@@ -41,7 +42,8 @@ export class Home implements AfterViewInit, OnDestroy {
   videoTeaserRef?: ElementRef<HTMLVideoElement>;
 
   // ── Detección de dispositivo (una sola vez) ───────────────────
-  private readonly isMobile = window.innerWidth <= 768;
+  private lastWidth = window.innerWidth;
+  public readonly isMobile = window.innerWidth <= 768;
   private readonly isTablet = window.innerWidth > 768 && window.innerWidth <= 1024;
 
   // En móvil NO renderizamos partículas ni efectos pesados
@@ -399,71 +401,121 @@ export class Home implements AfterViewInit, OnDestroy {
   // THREE CORE — configuración adaptativa
   // ═══════════════════════════════════════════════════════════════
 
-  private initThree(): void {
-    const container = this.canvasRef.nativeElement;
+private initThree(): void {
+  const container = this.canvasRef.nativeElement;
 
-    this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.FogExp2(0x020202, this.isMobile ? 0.025 : 0.018);
+  this.scene = new THREE.Scene();
+  this.scene.fog = new THREE.FogExp2(0x020202, this.isMobile ? 0.025 : 0.018);
 
-    this.camera = new THREE.PerspectiveCamera(
-      35,
-      container.clientWidth / container.clientHeight,
-      0.1,
-      1000
-    );
-    this.camera.position.set(0, 0, this.isMobile ? 14 : 11);
+  this.camera = new THREE.PerspectiveCamera(
+    35,
+    container.clientWidth / container.clientHeight,
+    0.1,
+    1000
+  );
+  this.camera.position.set(0, 0, this.isMobile ? 14 : 11);
 
-    this.renderer = new THREE.WebGLRenderer({
-      antialias: !this.isMobile,       // sin antialias en móvil
-      alpha: true,
-      powerPreference: 'high-performance',
-    });
-    this.renderer.setSize(container.clientWidth, container.clientHeight);
+  this.renderer = new THREE.WebGLRenderer({
+    antialias: !this.isMobile,
+    alpha: true,
+    powerPreference: 'high-performance',
+  });
+  this.renderer.setSize(container.clientWidth, container.clientHeight);
 
-    // DPR: 1 en móvil, 1.5 en tablet, 2 en desktop
-    const dpr = this.isMobile ? 1 : this.isTablet ? 1.5 : Math.min(window.devicePixelRatio, 2);
-    this.renderer.setPixelRatio(dpr);
-    this.renderer.shadowMap.enabled = false;   // sin sombras → rendimiento
+  const dpr = this.isMobile ? 0.85 : (this.isTablet ? 1.2 : Math.min(window.devicePixelRatio, 2));
+  this.renderer.setPixelRatio(dpr);
+  this.renderer.getContext().getExtension('EXT_texture_filter_anisotropic');
+  this.renderer.shadowMap.enabled = false;
 
-    container.appendChild(this.renderer.domElement);
+  container.appendChild(this.renderer.domElement);
 
-    // Iluminación — más intensa en móvil porque no hay partículas ni ambiente extra
-    const ambient = new THREE.AmbientLight(0xffffff, this.isLowEnd ? 0.7 : 0.4);
-    this.scene.add(ambient);
+  // ============================================================
+  // CONFIGURACIÓN DE ILUMINACIÓN CENTRALIZADA Y ADAPTATIVA
+  // ============================================================
+  
+  // 1. AMBIENT LIGHT (Casi nula en ambos para el look oscuro)
+  const ambientIntensity = this.isMobile ? 0.01 : 0.02; // Súper oscuro en móvil
+  const ambient = new THREE.AmbientLight(0xffffff, ambientIntensity);
+  this.scene.add(ambient);
 
-    this.keyLight = new THREE.DirectionalLight(0x00eaff, this.isLowEnd ? 3.5 : 2);
-    this.keyLight.position.set(4, 5, 6);
-    this.scene.add(this.keyLight);
+  // Inicializamos las luces sin posición aún
+  this.keyLight = new THREE.DirectionalLight(0x00eaff);
+  this.rimLight = new THREE.PointLight(0xff00aa);
 
-    this.rimLight = new THREE.PointLight(0xff00aa, this.isLowEnd ? 7 : 4, 40);
+  if (this.isMobile) {
+    // ─── CONFIGURACIÓN SUTIL SÓLO PARA MÓVIL ──────────────────
+    
+    // Luz CIAN (Derecha): Menos potente para que no lave el color
+    this.keyLight.intensity = 2.5; // Bajamos de 4.5 a 2.5
+    // Posición: Bajita y a la derecha, pero no tan de frente
+    this.keyLight.position.set(6, 2, 5); 
+
+    // Luz MAGENTA (Izquierda): PointLight sutil y cercano
+    this.rimLight.intensity = 12; // Bajamos de 25 a 12
+    this.rimLight.distance = 12;   // Radio corto
+    // Posición: La acercamos mucho al borde izquierdo del rostro
+    this.rimLight.position.set(-3, 1, 3);
+
+  } else {
+    // ─── CONFIGURACIÓN DE ESCRITORIO (RESTAURADA A ORIGINAL) ──
+    // *Esto asegura que el escritorio no cambie*
+    
+    // Luz CIAN (Derecha): Potencia media, posición alta
+    this.keyLight.intensity = 2;
+    this.keyLight.position.set(4, 5, 6); 
+
+    // Luz MAGENTA (Izquierda): PointLight potente y lejano
+    this.rimLight.intensity = 4;
+    this.rimLight.distance = 40;
+    // Posición: Muy arriba y atrás para bañar la silueta
     this.rimLight.position.set(-4, 2, 5);
-    this.scene.add(this.rimLight);
-
-    this.scene.add(this.mainModelGroup);
   }
+
+  // Añadimos las luces configuradas a la escena
+  this.scene.add(this.keyLight);
+  this.scene.add(this.rimLight);
+  this.scene.add(this.mainModelGroup);
+}
 
   // ═══════════════════════════════════════════════════════════════
   // BUSTO 3D
   // ═══════════════════════════════════════════════════════════════
 
-  private loadMainBust(): void {
-    new GLTFLoader().load('/assets/models/model-headfaces.glb', (gltf) => {
-      const model = gltf.scene;
-      model.traverse((n: any) => {
-        if (n.isMesh) {
+private loadMainBust(): void {
+  new GLTFLoader().load('/assets/models/model-headfaces.glb', (gltf) => {
+    const model = gltf.scene;
+    model.traverse((n: any) => {
+      if (n.isMesh) {
+        if (this.isMobile) {
+          // OPTIMIZACIÓN MÓVIL: Phong sin propiedades inválidas
+        n.material = new THREE.MeshPhongMaterial({
+          color: 0x050505,      // Casi negro para que solo brille donde hay luz
+          specular: 0xffffff,   // Blanco para reflejar tanto el rosa como el cian
+          shininess: 40,        // Bajamos de 80 a 40 para que el brillo sea menos "puntual"
+          emissive: 0x000000
+        });
+        } else {
+          // DESKTOP: Standard con PBR
           n.material = new THREE.MeshStandardMaterial({
             color: 0xcfd8dc,
             metalness: 0.95,
             roughness: 0.25
           });
-          n.castShadow    = false;
-          n.receiveShadow = false;
         }
-      });
-      this.mainModelGroup.add(model);
-      this.mainModelGroup.scale.setScalar(this.isMobile ? 4 : 5);
+        
+        n.castShadow = false;
+        n.receiveShadow = false;
+        n.frustumCulled = false; 
+      }
     });
-  }
+
+    if (this.isMobile) {
+      this.mainModelGroup.position.y = 0.5; 
+    }
+    this.mainModelGroup.add(model);
+    this.mainModelGroup.scale.setScalar(this.isMobile ? 3.5 : 5);
+  });
+}
 
   // ═══════════════════════════════════════════════════════════════
   // SCROLL
@@ -581,14 +633,16 @@ export class Home implements AfterViewInit, OnDestroy {
   private animate = () => {
     this.animationId = requestAnimationFrame(this.animate);
 
-    // Móvil: renderizar cada 2 frames → ~30fps
-    if (this.isMobile) {
-      this.frameCount++;
-      if (this.frameCount % 2 !== 0) return;
-    }
+    
+    // 1. Si no hay interacción ni scroll, y estamos en móvil, bajamos aún más el ritmo
+      if (this.isMobile) {
+        this.frameCount++;
+        if (this.frameCount % 3 !== 0) return; // Bajamos a ~20fps en reposo móvil
+      }
 
-    this.mouseOffsetY += (this.targetMouseY - this.mouseOffsetY) * 0.05;
-    this.mouseOffsetX += (this.targetMouseX - this.mouseOffsetX) * 0.05;
+    // Suavizado de movimiento
+      this.mouseOffsetY += (this.targetMouseY - this.mouseOffsetY) * (this.isMobile ? 0.03 : 0.05);
+      this.mouseOffsetX += (this.targetMouseX - this.mouseOffsetX) * (this.isMobile ? 0.03 : 0.05);
 
     if (!this.interactionEnabled) {
       this.mouseOffsetY *= 0.9;
@@ -623,10 +677,19 @@ export class Home implements AfterViewInit, OnDestroy {
   }
 
   private onResize = () => {
+    // 1. Validar si el cambio de ancho es real (Ignorar saltos de barra de herramientas en móvil)
+    if (this.isMobile && Math.abs(window.innerWidth - this.lastWidth) < 50) {
+      return; 
+    }
+
+    this.lastWidth = window.innerWidth; // Actualizamos para la próxima validación
+
     const container = this.canvasRef.nativeElement;
     this.camera.aspect = container.clientWidth / container.clientHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(container.clientWidth, container.clientHeight);
+
+    // Refrescar GSAP para que los triggers no se descuadren
     setTimeout(() => ScrollTrigger.refresh(), 200);
   };
 

@@ -378,6 +378,24 @@
     </div>
   </div>
 
+  <!-- DIVISOR 3.5 -->
+    <div class="hm-section-divider" aria-hidden="true">
+      <div class="hm-divider-line">
+        <div class="hm-divider-particle"></div>
+      </div>
+      <span class="hm-divider-label">STREAMING · DEV_CHRONICLE</span>
+      <div class="hm-divider-line">
+        <div class="hm-divider-particle hm-divider-particle--delay"></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════
+         ESCENA 3.5 — DEV CHRONICLE
+    ══════════════════════════════ -->
+    <section class="hm-devchronicle-section relative z-20">
+      <app-devkinela></app-devkinela>
+    </section>
+
   <!-- ══════════════════════════════
        ESCENA 4 — HISTORIA / IDENTIDAD
        ⚠️ carousel-section ancla salida del modelo.
@@ -677,14 +695,21 @@
   <div class="hm-modal-inner hm-modal-inner--3d"
        (click)="$event.stopPropagation()">
  
-    <!--
-      [active]="videoModalOpen"  →  Three.js solo arranca cuando el modal abre.
-      (closeModal)               →  El botón X del visor cierra el modal.
-    -->
-    <app-prototipo
+    <app-prototipo *ngIf="!isMobile"
       [active]="videoModalOpen"
       (closeModal)="closeVideoModal()">
     </app-prototipo>
+
+    <div *ngIf="isMobile" class="hm-mobile-warning">
+      <div class="hm-warning-icon">⚠</div>
+      <h3 class="hm-warning-title">VISOR 3D RESTRINGIDO</h3>
+      <p class="hm-warning-text">
+        El renderizado de alta fidelidad de la maqueta requiere una estación de trabajo.
+        <br>
+        <strong>Disponible únicamente en versión de escritorio.</strong>
+      </p>
+      <button class="hm-btn-close-warning" (click)="closeVideoModal()">ENTENDIDO</button>
+    </div>
  
   </div>
 </div>

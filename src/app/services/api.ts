@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface RegistroAcceso {
   registro_id: number;
@@ -17,11 +18,20 @@ export interface RegistroAcceso {
   providedIn: 'root'
 })
 export class Api {
-  private baseUrl = 'http://127.0.0.1:8000/api';
+  private baseUrl = environment.apiUrl;
 
   constructor(private http: HttpClient) { }
 
-  getRegistros(): Observable<RegistroAcceso[]> {
-    return this.http.get<RegistroAcceso[]>(`${this.baseUrl}/audit/registros/`);
+ private get headers(): HttpHeaders {
+    let headers = new HttpHeaders();
+    if (environment.useNgrokBypass) {
+      headers = headers.set('ngrok-skip-browser-warning', 'true');
+    }
+    return headers;
   }
+  getRegistros(): Observable<RegistroAcceso[]> {
+      // Petición limpia y profesional
+      return this.http.get<RegistroAcceso[]>(`${this.baseUrl}/audit/registros/`, { headers: this.headers });
+    }
+
 }
