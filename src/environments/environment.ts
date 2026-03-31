@@ -1,8 +1,7 @@
 export const environment = {
   production: false,
-  // URL local para tus pruebas actuales
+  // URL local para pruebas 
   apiUrl: 'http://127.0.0.1:8000/api',
-  // Cuando necesites ngrok, solo cambias esta línea o usas el archivo de prod
   useNgrokBypass: false 
 };
 

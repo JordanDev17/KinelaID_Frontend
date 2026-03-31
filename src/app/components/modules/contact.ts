@@ -34,36 +34,36 @@ export class Contact implements AfterViewInit, OnDestroy {
 
   public currentTime = '';
 
-public techPoints: TechPoint[] = [
-  {
-    name: 'HQ_KINELA',
-    coords: [4.716206946669707, -74.2214449806638], // Mosquera - Ecoplaza
-    type: 'primary',
-    description: 'Sede principal · Desarrollo & Operaciones · Control central de IA',
-    status: 'ACTIVO'
-  },
-  {
-    name: 'PARQUE EMPRESARIAL TECNOLOGICO',
-    coords: [4.744898764127665, -74.13999925725251], // Zona Parque Tecnológico Bogotá
-    type: 'node',
-    description: 'Hub tecnológico · Integración I+D · Conectividad empresarial',
-    status: 'ACTIVO'
-  },
-  {
-    name: 'CC UNILAGO',
-    coords: [4.7477015490879735, -74.14109419381164], // Norte Bogotá (zona universidades / innovación)
-    type: 'relay',
-    description: 'Zona principal de distribucion y mantenimiento, Hardware y Software',
-    status: 'ACTIVO'
-  },
-  {
-    name: 'CONNECTA 26',
-    coords: [4.686678583155332, -74.12046307682988], // Sabana occidente
-    type: 'sensor',
-    description: 'Zona de empresas y startups tecnologicas.',
-    status: 'ACTIVO'
-  },
-];
+  public techPoints: TechPoint[] = [
+    {
+      name: 'HQ_KINELA',
+      coords: [4.716206946669707, -74.2214449806638],
+      type: 'primary',
+      description: 'Sede principal · Desarrollo & Operaciones · Control central de IA',
+      status: 'ACTIVO'
+    },
+    {
+      name: 'PARQUE EMPRESARIAL TECNOLOGICO',
+      coords: [4.744898764127665, -74.13999925725251],
+      type: 'node',
+      description: 'Hub tecnológico · Integración I+D · Conectividad empresarial',
+      status: 'ACTIVO'
+    },
+    {
+      name: 'CC UNILAGO',
+      coords: [4.7477015490879735, -74.14109419381164],
+      type: 'relay',
+      description: 'Zona principal de distribución y mantenimiento, Hardware y Software',
+      status: 'ACTIVO'
+    },
+    {
+      name: 'CONNECTA 26',
+      coords: [4.686678583155332, -74.12046307682988],
+      type: 'sensor',
+      description: 'Zona de empresas y startups tecnológicas.',
+      status: 'ACTIVO'
+    },
+  ];
 
   private typeConfig: Record<string, { size: number }> = {
     primary: { size: 36 },
@@ -84,9 +84,7 @@ public techPoints: TechPoint[] = [
       (entries) => {
         if (entries[0].isIntersecting) {
           this.ngZone.runOutsideAngular(() => {
-            setTimeout(() => {
-              this.initMap();
-            }, 150);
+            setTimeout(() => this.initMap(), 150);
           });
           observer.disconnect();
         }
@@ -100,10 +98,8 @@ public techPoints: TechPoint[] = [
   private startClock(): void {
     const update = () => {
       const now = new Date();
-      const h = String(now.getHours()).padStart(2, '0');
-      const m = String(now.getMinutes()).padStart(2, '0');
-      const s = String(now.getSeconds()).padStart(2, '0');
-      this.currentTime = `${h}:${m}:${s}`;
+      const pad = (n: number) => String(n).padStart(2, '0');
+      this.currentTime = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
       this.cdr.detectChanges();
     };
     update();
@@ -118,38 +114,28 @@ public techPoints: TechPoint[] = [
     this.map = L.map(this.mapContainer.nativeElement, {
       zoomControl: false,
       attributionControl: false,
-      scrollWheelZoom: false
-    }).setView(initialCoords, 14);
+      scrollWheelZoom: false,
+      // Better touch handling for mobile
+    }).setView(initialCoords, 13);
 
     L.tileLayer(
       'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
       { maxZoom: 19 }
     ).addTo(this.map);
 
-    window.addEventListener('resize', () => {
-      this.ngZone.run(() => {
-        if (this.map) {
-          this.map.invalidateSize();
-        }
-      });
-    });
+    // Keep map sized correctly on resize
+    const onResize = () => {
+      this.ngZone.run(() => this.map?.invalidateSize());
+    };
+    window.addEventListener('resize', onResize);
 
     this.techPoints.forEach(point => {
       const cfg = this.typeConfig[point.type];
       const half = cfg.size / 2;
 
-      /*
-       * IMPORTANTE: Las clases .ck-mh, .ck-mh--*, .ck-mp, .ck-mc
-       * deben estar en styles.css GLOBAL.
-       * Leaflet crea los divIcon fuera del DOM de Angular,
-       * por lo que el encapsulado _ngcontent no aplica.
-       */
       const customIcon = L.divIcon({
         className: `ck-mh ck-mh--${point.type}`,
-        html: `
-          <div class="ck-mp"></div>
-          <div class="ck-mc"></div>
-        `,
+        html: `<div class="ck-mp"></div><div class="ck-mc"></div>`,
         iconSize:      [cfg.size, cfg.size],
         iconAnchor:    [half, half],
         tooltipAnchor: [0, -(half + 8)]
@@ -157,7 +143,7 @@ public techPoints: TechPoint[] = [
 
       const marker = L.marker(point.coords, { icon: customIcon }).addTo(this.map);
 
-      const popupContent = `
+      const popup = `
         <div class="ck-popup">
           <div class="ck-popup-header">
             <span class="ck-popup-type">${point.type.toUpperCase()}</span>
@@ -169,7 +155,7 @@ public techPoints: TechPoint[] = [
         </div>
       `;
 
-      marker.bindPopup(popupContent, {
+      marker.bindPopup(popup, {
         className: 'ck-popup-wrap',
         closeButton: false,
         offset: [0, -(half + 6)],
@@ -178,11 +164,11 @@ public techPoints: TechPoint[] = [
 
       const el = marker.getElement();
       if (el) {
+        // Mouse events (desktop)
         el.addEventListener('mouseenter', () => marker.openPopup());
-        el.addEventListener('mouseleave', () => {
-          setTimeout(() => marker.closePopup(), 300);
-        });
+        el.addEventListener('mouseleave', () => setTimeout(() => marker.closePopup(), 300));
 
+        // GSAP scale animation — only outside Angular zone
         this.ngZone.runOutsideAngular(() => {
           el.addEventListener('mouseenter', () => {
             gsap.to(el, { scale: 1.4, duration: 0.25, ease: 'back.out(2)' });
@@ -190,17 +176,25 @@ public techPoints: TechPoint[] = [
           el.addEventListener('mouseleave', () => {
             gsap.to(el, { scale: 1, duration: 0.2, ease: 'power2.out' });
           });
+          // Touch: toggle popup on tap
+          el.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (this.map.hasLayer(marker)) {
+              marker.openPopup();
+            }
+          });
         });
       }
     });
 
+    // Ensure map renders correctly after paint
     setTimeout(() => this.map.invalidateSize(), 250);
-    setTimeout(() => this.map.invalidateSize(), 750);
+    setTimeout(() => this.map.invalidateSize(), 800);
   }
 
   public focusLocation(coords: L.LatLngTuple): void {
     if (!this.map) return;
-    this.map.flyTo(coords, 16, { animate: true, duration: 1.5 });
+    this.map.flyTo(coords, 16, { animate: true, duration: 1.2 });
   }
 
   public openGmail(
@@ -208,15 +202,12 @@ public techPoints: TechPoint[] = [
     subject: string = 'KINELA_CONTACT',
     body: string = 'Hola, me gustaría obtener más información sobre KinelaID.'
   ): void {
-    const url = `https://mail.google.com/mail/?view=cm&fs=1` +
-      `&to=${encodeURIComponent(to)}` +
-      `&su=${encodeURIComponent(subject)}` +
-      `&body=${encodeURIComponent(body)}`;
-  
+    const url = `https://mail.google.com/mail/?view=cm&fs=1`
+      + `&to=${encodeURIComponent(to)}`
+      + `&su=${encodeURIComponent(subject)}`
+      + `&body=${encodeURIComponent(body)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   }
-
-
 
   ngOnDestroy(): void {
     if (this.map) this.map.remove();

@@ -52,6 +52,21 @@ export class Prototipo implements AfterViewInit, OnChanges, OnDestroy {
   private dracoLoader?: DRACOLoader;
   private initialized = false;
 
+  // ── Performance tier ──────────────────────────────────────
+  private isIntegratedGPU = false;
+  private isTouch = navigator.maxTouchPoints > 0;
+  private frameCount = 0;
+  private lastInteractionTime = 0;
+  private readonly IDLE_MS = 2000;
+  private userIsInteracting = false;
+
+
+
+
+
+
+
+
   // ── Luces hijas de la cámara ─────────────────────────────────
   // Al estar adjuntas a la cámara, siempre iluminan desde el mismo
   // ángulo relativo al punto de vista → sin artefactos al rotar.
@@ -63,27 +78,102 @@ export class Prototipo implements AfterViewInit, OnChanges, OnDestroy {
   ngAfterViewInit(): void { /* lazy — espera a [active] */ }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['active'] && this.active && !this.initialized) {
+    if (!changes['active']) return;
+
+    if (this.active) {
+      // Abrir: inicializar (o reinicializar si fue cerrado antes)
       this.initialized = true;
       requestAnimationFrame(() => this.boot());
+
+    } else {
+      // Cerrar: detener loop Y liberar GPU completamente
+      this.stopAndDispose();
     }
-    if (changes['active'] && !this.active && this.initialized && this.animFrameId) {
+  }
+
+    private stopAndDispose(): void {
+    // 1. Detener loop de animación
+    if (this.animFrameId) {
       cancelAnimationFrame(this.animFrameId);
       this.animFrameId = undefined;
     }
-    if (changes['active'] && this.active && this.initialized && !this.animFrameId) {
-      this.ngZone.runOutsideAngular(() => this.animate());
+
+    // 2. Parar animaciones del modelo
+    this.animationMixer?.stopAllAction();
+    this.animationMixer = undefined;
+
+    // 3. Limpiar controles
+    this.controls?.dispose();
+
+    // 4. Purgar escena: geometrías + materiales + texturas
+    this.scene?.traverse((obj) => {
+      if (obj instanceof THREE.Mesh) {
+        obj.geometry?.dispose();
+        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+        mats.forEach(m => {
+          if (!m) return;
+          // Disponer texturas del material
+          Object.values(m).forEach((v: any) => {
+            if (v instanceof THREE.Texture) v.dispose();
+          });
+          m.dispose();
+        });
+      }
+    });
+
+    // 5. Limpiar environment map (el más pesado en VRAM)
+    if (this.scene?.environment) {
+      this.scene.environment.dispose();
+      this.scene.environment = null;
     }
+
+    // 6. Remover el canvas del DOM y liberar contexto WebGL
+    if (this.renderer) {
+      this.renderer.renderLists.dispose();
+      this.renderer.forceContextLoss(); // libera contexto WebGL inmediatamente
+      this.renderer.dispose();
+      const canvas = this.renderer.domElement;
+      canvas.parentElement?.removeChild(canvas);
+    }
+
+    // 7. Resetear estado para permitir reinicialización
+    this.loadedModel   = undefined;
+    this.loadState     = 'idle';
+    this.initialized   = false;
+    this.frameCount    = 0;
+
+    // 8. Forzar GC sugiriéndole al browser liberar recursos
+    this.renderer = undefined!;
+    this.scene    = undefined!;
+    this.camera   = undefined!;
+    this.controls = undefined!;
   }
 
   ngOnDestroy(): void {
-    if (this.animFrameId) cancelAnimationFrame(this.animFrameId);
+    this.stopAndDispose();
     this.resizeObserver?.disconnect();
     this.dracoLoader?.dispose();
-    this.disposeScene();
   }
 
   constructor(private ngZone: NgZone) {}
+
+  private detectGPU(): void {
+  try {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl') as WebGLRenderingContext | null;
+    if (!gl) { this.isIntegratedGPU = true; return; }
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    if (!ext) { this.isIntegratedGPU = true; return; }
+    const r = (gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) as string) ?? '';
+    this.isIntegratedGPU = this.isTouch ||
+      /intel|amd radeon\(tm\) graphics|apple m\d|llvmpipe|swiftshader|microsoft basic/i.test(r);
+  } catch {
+    this.isIntegratedGPU = true;
+  }
+}
+
+
+
 
   // ─────────────────────────────────────────────────────────────
   // BOOT
@@ -101,76 +191,115 @@ export class Prototipo implements AfterViewInit, OnChanges, OnDestroy {
   // ESCENA
   // ─────────────────────────────────────────────────────────────
 
-  private initScene(): void {
-    const el = this.rendererContainer.nativeElement;
-    const w  = el.offsetWidth  || window.innerWidth;
-    const h  = el.offsetHeight || window.innerHeight;
+private initScene(): void {
+  this.detectGPU();
+  const el = this.rendererContainer.nativeElement;
+  const w  = el.offsetWidth  || window.innerWidth;
+  const h  = el.offsetHeight || window.innerHeight;
 
-    // ── Escena ────────────────────────────────────────────────
-    this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x020202);
+  // ── Escena ────────────────────────────────────────────────
+  this.scene = new THREE.Scene();
+  this.scene.background = new THREE.Color(0x020202);
+  // Niebla solo en desktop dedicado — cálculo por pixel innecesario en integrada
+  if (!this.isIntegratedGPU) {
     this.scene.fog = new THREE.FogExp2(0x020202, 0.008);
+  }
 
-    // ── Cámara ────────────────────────────────────────────────
-    this.camera = new THREE.PerspectiveCamera(35, w / h, 0.01, 2000);
-    this.camera.position.set(0, 1, 7);
+  // ── Cámara ────────────────────────────────────────────────
+  this.camera = new THREE.PerspectiveCamera(35, w / h, 0.01, 2000);
+  this.camera.position.set(0, 1, 7);
 
-    // ── Renderer ──────────────────────────────────────────────
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.setSize(w, h);
-    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.4;
-    this.renderer.shadowMap.enabled = true;
+  // ── Renderer ──────────────────────────────────────────────
+  this.renderer = new THREE.WebGLRenderer({
+    antialias:              !this.isIntegratedGPU,  // sin antialias en integrada
+    logarithmicDepthBuffer: !this.isIntegratedGPU,  // muy caro en integrada
+    alpha:                  false,
+    powerPreference:        this.isIntegratedGPU ? 'default' : 'high-performance',
+  });
+
+  // DPR adaptativo
+  const dpr = this.isIntegratedGPU
+    ? Math.min(window.devicePixelRatio, 1.0)   // integrada: fuerza 1x
+    : Math.min(window.devicePixelRatio, 1.5);  // dedicada:  máx 1.5x
+  this.renderer.setPixelRatio(dpr);
+  this.renderer.setSize(w, h);
+  this.renderer.outputColorSpace   = THREE.SRGBColorSpace;
+  this.renderer.toneMapping        = THREE.ACESFilmicToneMapping;
+  this.renderer.toneMappingExposure = this.isIntegratedGPU ? 1.2 : 1.4;
+
+  // Sombras: solo en desktop dedicado
+  this.renderer.shadowMap.enabled = !this.isIntegratedGPU;
+  if (!this.isIntegratedGPU) {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    el.appendChild(this.renderer.domElement);
+  }
 
-    // ── Environment map sutil ─────────────────────────────────
-    const pmrem = new THREE.PMREMGenerator(this.renderer);
-    pmrem.compileEquirectangularShader();
-    this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.02).texture;
-    pmrem.dispose();
+  el.appendChild(this.renderer.domElement);
 
-    // ── OrbitControls ─────────────────────────────────────────
-    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.06;
-    this.controls.minDistance   = 0.5;
-    this.controls.maxDistance   = 40;
-    this.controls.update();
+  // ── Environment map ───────────────────────────────────────
+  // Resolución reducida en integrada — la textura PMREM es el
+  // mayor consumo de VRAM en esta escena después del GLB
+  const pmrem = new THREE.PMREMGenerator(this.renderer);
+  pmrem.compileEquirectangularShader();
+  this.scene.environment = pmrem.fromScene(
+    new RoomEnvironment(),
+    this.isIntegratedGPU ? 0.01 : 0.02
+  ).texture;
+  pmrem.dispose();
 
-    // ══════════════════════════════════════════════════════════
-    // ILUMINACIÓN
-    //
-    // Esquema: 3 luces hijas de la CÁMARA + 1 rim fija en escena
-    //
-    // Al ser hijas de la cámara, se mueven con ella → siempre
-    // iluminan desde el mismo ángulo visual, sin artefactos
-    // al rotar el modelo con OrbitControls.
-    //
-    //  camLightLeft  — cenital izquierda,  cyan   #00eaff
-    //  camLightRight — cenital derecha,    cyan   #00eaff  (más intensa)
-    //  camLightFill  — frontal ligeramente baja, blanco neutro (relleno)
-    //  camRim        — punto de borde, magenta #ff00aa, fijo en escena
-    // ══════════════════════════════════════════════════════════
+  // ── OrbitControls ─────────────────────────────────────────
+  this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+  this.controls.enableDamping  = true;
+  this.controls.dampingFactor  = 0.06;
+  this.controls.minDistance    = 0.5;
+  this.controls.maxDistance    = 40;
+  this.controls.mouseButtons   = {
+    LEFT:   THREE.MOUSE.ROTATE,
+    MIDDLE: THREE.MOUSE.DOLLY,
+    RIGHT:  THREE.MOUSE.PAN,
+  };
+  this.controls.update();
 
-    // Ambiente mínimo — base para que nada quede totalmente negro
-    const ambient = new THREE.AmbientLight(0x112233, 0.6);
-    this.scene.add(ambient);
+  // Registrar interacción para throttle adaptativo en animate()
+  this.renderer.domElement.addEventListener('pointerdown', () => {
+    this.userIsInteracting      = true;
+    this.lastInteractionTime    = performance.now();
+  });
+  this.renderer.domElement.addEventListener('pointerup', () => {
+    this.userIsInteracting      = false;
+    this.lastInteractionTime    = performance.now();
+  });
 
-    // ── Cenital izquierda (cyan) — hija de cámara ─────────────
-    this.camLightLeft = new THREE.DirectionalLight(0x00eaff, 2.8);
-    // Posición relativa a la cámara: arriba-izquierda, ligeramente atrás
-    this.camLightLeft.position.set(-1.5, 3, 1);
-    this.camLightLeft.castShadow = false; // sombras solo en la derecha
-    this.camera.add(this.camLightLeft);
+  // ══════════════════════════════════════════════════════════
+  // ILUMINACIÓN
+  //
+  // Esquema: 3 luces hijas de la CÁMARA + 1 rim fija en escena
+  //
+  // Al estar adjuntas a la cámara, se mueven con ella → siempre
+  // iluminan desde el mismo ángulo visual, sin artefactos
+  // al rotar el modelo con OrbitControls.
+  //
+  //  camLightLeft  — cenital izquierda,  cyan   #00eaff
+  //  camLightRight — cenital derecha,    cyan   #00eaff  (más intensa)
+  //  camLightFill  — frontal suave,      blanco neutro (relleno)
+  //  camRim        — punto de borde,     magenta #ff00aa, fijo en escena
+  // ══════════════════════════════════════════════════════════
 
-    // ── Cenital derecha (cyan más intensa) — hija de cámara ───
-    this.camLightRight = new THREE.DirectionalLight(0x00eaff, 3.8);
-    // Arriba-derecha, apunta levemente hacia abajo-centro
-    this.camLightRight.position.set(1.5, 4, 1);
-    this.camLightRight.castShadow = true;
+  // Ambiente mínimo — base para que nada quede totalmente negro
+  const ambient = new THREE.AmbientLight(0x112233, 0.6);
+  this.scene.add(ambient);
+
+  // ── Cenital izquierda (cyan) — hija de cámara ─────────────
+  this.camLightLeft = new THREE.DirectionalLight(0x00eaff, 2.8);
+  this.camLightLeft.position.set(-1.5, 3, 1);
+  this.camLightLeft.castShadow = false; // sombras solo en la derecha
+  this.camera.add(this.camLightLeft);
+
+  // ── Cenital derecha (cyan más intensa) — hija de cámara ───
+  this.camLightRight = new THREE.DirectionalLight(0x00eaff, 3.8);
+  this.camLightRight.position.set(1.5, 4, 1);
+  // Sombras solo en GPU dedicada — shadow map es el mayor costo single-pass
+  this.camLightRight.castShadow = !this.isIntegratedGPU;
+  if (!this.isIntegratedGPU) {
     this.camLightRight.shadow.mapSize.set(1024, 1024);
     this.camLightRight.shadow.camera.near   = 0.5;
     this.camLightRight.shadow.camera.far    = 50;
@@ -179,27 +308,25 @@ export class Prototipo implements AfterViewInit, OnChanges, OnDestroy {
     this.camLightRight.shadow.camera.top    = 5;
     this.camLightRight.shadow.camera.bottom = -5;
     this.camLightRight.shadow.bias          = -0.002;
-    this.camera.add(this.camLightRight);
-
-    // ── Relleno frontal (blanco neutro) — hija de cámara ─────
-    // Elimina las sombras duras en la cara frontal del modelo
-    this.camLightFill = new THREE.DirectionalLight(0xd0eeff, 1.4);
-    this.camLightFill.position.set(0, 0.5, 3); // casi frontal, ligeramente arriba
-    this.camera.add(this.camLightFill);
-
-    // CRÍTICO: la cámara debe estar en la escena para que sus
-    // hijos (luces) afecten al renderer
-    this.scene.add(this.camera);
-
-    // ── Rim magenta — FIJO en la escena (no sigue a la cámara) ─
-    // Borde de color sin artefactos porque es una luz de punto
-    // que no proyecta sombras y su efecto es omnidireccional
-    this.camRim = new THREE.PointLight(0xff00aa, 4, 0, 2);
-    // Se reposiciona tras cargar el modelo
-    this.camRim.position.set(-3, 3, 2);
-    this.scene.add(this.camRim);
   }
+  this.camera.add(this.camLightRight);
 
+  // ── Relleno frontal (blanco neutro) — hija de cámara ──────
+  // Elimina las sombras duras en la cara frontal del modelo
+  this.camLightFill = new THREE.DirectionalLight(0xd0eeff, 1.4);
+  this.camLightFill.position.set(0, 0.5, 3); // casi frontal, ligeramente arriba
+  this.camera.add(this.camLightFill);
+
+  // CRÍTICO: la cámara debe estar en la escena para que sus
+  // hijos (luces) afecten al renderer
+  this.scene.add(this.camera);
+
+  // ── Rim magenta — FIJO en la escena (no sigue a la cámara) ─
+  // Se reposiciona tras cargar el modelo en onModelLoaded()
+  this.camRim = new THREE.PointLight(0xff00aa, 4, 0, 2);
+  this.camRim.position.set(-3, 3, 2);
+  this.scene.add(this.camRim);
+}
   // ─────────────────────────────────────────────────────────────
   // CARGA DEL MODELO
   // ─────────────────────────────────────────────────────────────
@@ -356,27 +483,38 @@ export class Prototipo implements AfterViewInit, OnChanges, OnDestroy {
   // ─────────────────────────────────────────────────────────────
 
   private animate = (): void => {
-  this.animFrameId = requestAnimationFrame(this.animate);
+    this.animFrameId = requestAnimationFrame(this.animate);
+    if (!this.renderer || !this.controls) return;
 
-  // Guard: si el renderer o controls no están listos aún, salimos
-  if (!this.renderer || !this.controls) return;
-
-  const delta   = this.clock.getDelta();
-  const elapsed = this.clock.elapsedTime;
-
-  this.animationMixer?.update(delta);
-
-    // Pulso suave en las luces cenitales — ciclo lento para no distraer
-    if (this.camLightRight) {
-      this.camLightRight.intensity = 3.8 + Math.sin(elapsed * 0.6) * 0.4;
-    }
-    if (this.camRim) {
-      this.camRim.intensity = 4.0 + Math.sin(elapsed * 0.9 + 1.0) * 0.8;
+    // ── Throttle por tier ──────────────────────────────────
+    if (this.isIntegratedGPU) {
+      const idle = !this.userIsInteracting &&
+        (performance.now() - this.lastInteractionTime) > this.IDLE_MS;
+      if (idle) {
+        this.frameCount++;
+        if (this.frameCount % 2 !== 0) return; // ~30fps en reposo
+      }
+      // Con interacción activa → 60fps completos
     }
 
-    // Rotación lenta automática en reposo
-    if (this.loadedModel && this.loadState === 'success') {
-      this.loadedModel.rotation.y += 0.0008;
+    const delta   = this.clock.getDelta();
+    const elapsed = this.clock.elapsedTime;
+
+    this.animationMixer?.update(delta);
+
+    // Pulso de luces: solo en desktop dedicado (sin Math.sin en integrada)
+    if (!this.isIntegratedGPU) {
+      if (this.camLightRight) {
+        this.camLightRight.intensity = 3.8 + Math.sin(elapsed * 0.6) * 0.4;
+      }
+      if (this.camRim) {
+        this.camRim.intensity = 4.0 + Math.sin(elapsed * 0.9 + 1.0) * 0.8;
+      }
+    }
+
+    // Rotación automática: más lenta en integrada
+    if (this.loadedModel && this.loadState === 'success' && !this.userIsInteracting) {
+      this.loadedModel.rotation.y += this.isIntegratedGPU ? 0.0003 : 0.0008;
     }
 
     this.controls.update();

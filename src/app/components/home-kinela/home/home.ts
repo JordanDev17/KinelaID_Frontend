@@ -41,15 +41,18 @@ export class Home implements AfterViewInit, OnDestroy {
   @ViewChild('videoTeaser')
   videoTeaserRef?: ElementRef<HTMLVideoElement>;
 
-  // ── Detección de dispositivo (una sola vez) ───────────────────
+  // ── Detección de dispositivo ────────────────────────────────────
+  private readonly isTouch = navigator.maxTouchPoints > 0;
+  // isMobile: dimensión mínima de pantalla ≤ 430px — cubre phones en cualquier orientación
+  public readonly isMobile = Math.min(window.screen.width, window.screen.height) <= 430;
+  // isTablet: touch device que no es teléfono (iPads, Android tablets en cualquier orientación)
+  private readonly isTablet = this.isTouch && !this.isMobile;
   private lastWidth = window.innerWidth;
-  public readonly isMobile = window.innerWidth <= 768;
-  private readonly isTablet = window.innerWidth > 768 && window.innerWidth <= 1024;
 
-  // En móvil NO renderizamos partículas ni efectos pesados
-  private get isLowEnd(): boolean {
-    return this.isMobile || this.isTablet;
-  }
+  // Sin partículas ni efectos pesados en touch devices
+  private get isLowEnd(): boolean { return this.isMobile || this.isTablet; }
+  // Modelo estático: sin animaciones de scroll ni cursor tracking
+  private get isFixedModel(): boolean { return this.isMobile || this.isTablet; }
 
   // ── THREE.js ──────────────────────────────────────────────────
   private scene!: THREE.Scene;
@@ -76,62 +79,67 @@ export class Home implements AfterViewInit, OnDestroy {
   public teaserCargado  = false;
   public teaserError    = false;
 
-  // ── Cursor (solo desktop) ─────────────────────────────────────
+  // ── Cursor (solo dispositivos no-touch) ──────────────────────
   private cursorDot!: HTMLElement;
   private cursorRing!: HTMLElement;
   private cursorVisible = false;
   private introPlayed   = false;
 
+  // ── GPU / Performance tier ────────────────────────────────────
+  private isIntegratedGPU  = false;
+  private lastInteractionTime = 0;
+  private readonly IDLE_MS  = 1800;
+
   // ═══════════════════════════════════════════════════════════════
   // LIFECYCLE
   // ═══════════════════════════════════════════════════════════════
 
-  ngAfterViewInit(): void {
-    this.ngZone.runOutsideAngular(() => {
-      this.initThree();
-      this.loadMainBust();
-      this.animate();
+ngAfterViewInit(): void {
+  this.ngZone.runOutsideAngular(() => {
+    this.detectGPU();
+    this.initThree();
+    this.loadMainBust();
+    this.animate();
 
-      // Partículas: solo desktop, 0 en móvil/tablet
-      if (!this.isLowEnd) {
-        this.addGlobalParticles();
-      }
-
-      this.setupScroll();
-      this.initNavProgress();
-      this.initHUD();
-      this.initSectionDividerAnimations();
-      this.initContactAnimation();
-      this.runIntro();
-
-      if (!this.isMobile) {
-        this.initCursor();
-      }
-    });
-
-    if (!this.isMobile) {
-      window.addEventListener('mousemove', this.onMouseMove);
+    if (!this.isLowEnd) {
+      this.addGlobalParticles();
     }
-    window.addEventListener('touchmove', this.onTouchMove, { passive: true });
-    window.addEventListener('resize', this.onResize);
 
-    // Teaser video
-    setTimeout(() => {
-      const v = this.videoTeaserRef?.nativeElement;
-      if (!v) return;
-      v.muted = true;
-      v.play().catch(() => {});
-      this.ngZone.runOutsideAngular(() => {
-        v.addEventListener('loadeddata', () => {
-          this.ngZone.run(() => {
-            this.teaserCargado = true;
-            this.cdr.markForCheck();
-          });
-        }, { once: true });
-      });
-    }, 1500);
+    this.setupScroll();
+    this.initNavProgress();
+    this.initHUD();
+    this.initSectionDividerAnimations();
+    this.initContactAnimation();
+    this.runIntro();
+
+    // Cursor: solo en dispositivos con mouse real
+    if (!this.isTouch) {
+      this.initCursor();
+    }
+  });
+
+  // Mousemove: solo en desktop interactivo
+  if (!this.isFixedModel && !this.isTouch) {
+    window.addEventListener('mousemove', this.onMouseMove);
   }
+  window.addEventListener('touchmove', this.onTouchMove, { passive: true });
+  window.addEventListener('resize', this.onResize);
 
+  setTimeout(() => {
+    const v = this.videoTeaserRef?.nativeElement;
+    if (!v) return;
+    v.muted = true;
+    v.play().catch(() => {});
+    this.ngZone.runOutsideAngular(() => {
+      v.addEventListener('loadeddata', () => {
+        this.ngZone.run(() => {
+          this.teaserCargado = true;
+          this.cdr.markForCheck();
+        });
+      }, { once: true });
+    });
+  }, 1500);
+}
   ngOnDestroy(): void {
     cancelAnimationFrame(this.animationId);
     this.renderer?.dispose();
@@ -160,7 +168,7 @@ export class Home implements AfterViewInit, OnDestroy {
     gsap.to(this.mainModelGroup.position, { x: 0, y: 0, z: 0, duration: 0.8, ease: 'power2.out' });
     gsap.to(this, { scrollRotationY: Math.PI, duration: 0.8, ease: 'power2.out' });
     gsap.to(this.camera.position, { z: this.isMobile ? 14 : 11, duration: 0.8, ease: 'power2.out' });
-    setTimeout(() => ScrollTrigger.refresh(), 900);
+    setTimeout(() => ScrollTrigger.refresh(), 900); 
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -316,41 +324,96 @@ export class Home implements AfterViewInit, OnDestroy {
   // DATA PARTICLES — SOLO desktop, skip en móvil/tablet
   // ═══════════════════════════════════════════════════════════════
 
-  private initDataParticles(): void {
-    if (this.isLowEnd) return;
+// ═══════════════════════════════════════════════════════════════
+// DATA PARTICLES — Optimizadas para Desktop con flujo cinético
+// ═══════════════════════════════════════════════════════════════
 
-    const container = document.querySelector('.hm-particles-container') as HTMLElement;
-    if (!container) return;
+private initDataParticles(): void {
+  // Mantener el skip para evitar lag en dispositivos menos potentes
+  if (this.isLowEnd) return;
 
-    const hexStrings = [
-      '0x7F · 0xA3 · 0x2B', 'ID::SCAN_OK', '> AUTH_TOKEN',
-      '0xFF · 0x00 · 0x44', 'FACE_MATCH::0.997',
-      '< KINELA_V3', 'EMBED[468]::OK', '> GRANT_ACCESS',
-    ];
+  const container = document.querySelector('.hm-particles-container') as HTMLElement;
+  if (!container) return;
 
-    ScrollTrigger.create({
-      trigger: '.video-section', start: 'top 55%', once: true,
-      onEnter: () => {
-        const vw = window.innerWidth, vh = window.innerHeight;
-        hexStrings.forEach((text, i) => {
-          const el = document.createElement('span');
-          el.className = 'hm-data-particle';
-          el.textContent = text;
-          container.appendChild(el);
-          const sx = vw * 0.72 + (Math.random() - 0.5) * 80;
-          const sy = vh * 0.35 + Math.random() * vh * 0.3;
-          const ex = vw * 0.4  + (Math.random() - 0.5) * 200;
-          const ey = vh * 0.4  + (Math.random() - 0.5) * 100;
-          gsap.fromTo(el,
-            { x: sx, y: sy, opacity: 0, scale: 0.8 },
-            { x: ex, y: ey, opacity: 0.8, scale: 1, duration: 1, delay: i * 0.12, ease: 'power2.out',
-              onComplete: () => {gsap.to(el, { opacity: 0, y: ey - 30, duration: 1.8, delay: 0.4 + i * 0.05, ease: 'power1.in', onComplete: () => el.remove() })}
-            }
-          );
+  // Strings más técnicos y coherentes con tu backend de Django
+  const dataTokens = [
+    '0x7F · 0xA3 · 0x2B', 'ID::SCAN_OK', '> AUTH_TOKEN',
+    'FACE_MATCH::0.997', 'EMBED[468]::OK', '> GRANT_ACCESS',
+    'VECTOR::CALCULATING', 'NODE::CONNECTED', 'SSL::ENCRYPTED'
+  ];
+
+  ScrollTrigger.create({
+    trigger: '.video-section',
+    start: 'top 55%',
+    once: true,
+    onEnter: () => {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+
+      dataTokens.forEach((text, i) => {
+        const el = document.createElement('span');
+        el.className = 'hm-data-particle';
+        el.textContent = text;
+        
+        // Estilo inicial por JS para asegurar visibilidad
+        Object.assign(el.style, {
+          position: 'absolute',
+          color: '#00f0c8', // Cyan KinelaID
+          fontFamily: 'monospace',
+          fontSize: '10px',
+          letterSpacing: '1px',
+          whiteSpace: 'nowrap',
+          pointerEvents: 'none',
+          textShadow: '0 0 8px rgba(0, 240, 200, 0.5)'
         });
-      }
-    });
-  }
+
+        container.appendChild(el);
+
+        // --- LÓGICA DE TRAYECTORIA ---
+        // Punto de origen: Derecha (donde estaría el panel de control)
+        const sx = vw * 0.85 + (Math.random() - 0.5) * 100;
+        const sy = vh * 0.4 + (Math.random() - 0.5) * 200;
+        
+        // Punto de destino: Centro (hacia la cara/video)
+        const ex = vw * 0.45 + (Math.random() - 0.5) * 150;
+        const ey = vh * 0.45 + (Math.random() - 0.5) * 150;
+
+        // Timeline para mayor control del flujo
+        const tl = gsap.timeline({
+          onComplete: () => el.remove()
+        });
+
+        tl.fromTo(el,
+          { 
+            x: sx, 
+            y: sy, 
+            opacity: 0, 
+            scale: 0.5,
+            filter: 'blur(4px)' 
+          },
+          { 
+            x: ex, 
+            y: ey, 
+            opacity: 1, 
+            scale: 1, 
+            filter: 'blur(0px)',
+            duration: 1.2, 
+            delay: i * 0.15, 
+            ease: 'expo.out' 
+          }
+        )
+        .to(el, {
+          // Efecto de "succión" o desvanecimiento hacia arriba
+          y: ey - 60,
+          opacity: 0,
+          scale: 1.2,
+          duration: 1.5,
+          ease: 'power2.inOut'
+        }, "+=0.3"); // Pequeña pausa antes de desvanecer
+      });
+    }
+  });
+}
 
   // ═══════════════════════════════════════════════════════════════
   // CONTACT ANIMATION
@@ -401,6 +464,21 @@ export class Home implements AfterViewInit, OnDestroy {
   // THREE CORE — configuración adaptativa
   // ═══════════════════════════════════════════════════════════════
 
+private detectGPU(): void {
+  try {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl') as WebGLRenderingContext | null;
+    if (!gl) return;
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    if (!ext) return;
+    const renderer = (gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) as string) ?? '';
+    this.isIntegratedGPU = /intel|amd radeon\(tm\) graphics|apple m\d|llvmpipe|swiftshader|microsoft basic/i.test(renderer);
+    console.debug('[GPU]', renderer, '→ integrated:', this.isIntegratedGPU);
+  } catch {
+    this.isIntegratedGPU = true; // fallback conservador
+  }
+}
+
 private initThree(): void {
   const container = this.canvasRef.nativeElement;
 
@@ -416,13 +494,19 @@ private initThree(): void {
   this.camera.position.set(0, 0, this.isMobile ? 14 : 11);
 
   this.renderer = new THREE.WebGLRenderer({
-    antialias: !this.isMobile,
+    antialias: !this.isMobile,          // tablet + desktop: sí; móvil: no
     alpha: true,
-    powerPreference: 'high-performance',
+    powerPreference: this.isFixedModel ? 'default' : 'high-performance',
   });
   this.renderer.setSize(container.clientWidth, container.clientHeight);
-
-  const dpr = this.isMobile ? 0.85 : (this.isTablet ? 1.2 : Math.min(window.devicePixelRatio, 2));
+  
+  const dpr = this.isMobile
+    ? 0.85
+    : this.isTablet
+      ? Math.min(window.devicePixelRatio, 1.2)   // tablet: calidad razonable
+      : this.isIntegratedGPU
+        ? Math.min(window.devicePixelRatio, 1.0) // laptop integrada: fuerza 1x
+        : Math.min(window.devicePixelRatio, 1.5);// desktop dedicada: máx 1.5x
   this.renderer.setPixelRatio(dpr);
   this.renderer.getContext().getExtension('EXT_texture_filter_anisotropic');
   this.renderer.shadowMap.enabled = false;
@@ -487,33 +571,35 @@ private loadMainBust(): void {
     model.traverse((n: any) => {
       if (n.isMesh) {
         if (this.isMobile) {
-          // OPTIMIZACIÓN MÓVIL: Phong sin propiedades inválidas
-        n.material = new THREE.MeshPhongMaterial({
-          color: 0x050505,      // Casi negro para que solo brille donde hay luz
-          specular: 0xffffff,   // Blanco para reflejar tanto el rosa como el cian
-          shininess: 40,        // Bajamos de 80 a 40 para que el brillo sea menos "puntual"
-          emissive: 0x000000
-        });
+          // Móvil: Phong, más barato
+          n.material = new THREE.MeshPhongMaterial({
+            color: 0x050505,
+            specular: 0xffffff,
+            shininess: 40,
+            emissive: 0x000000
+          });
         } else {
-          // DESKTOP: Standard con PBR
+          // Tablet + laptop + desktop: PBR estándar
           n.material = new THREE.MeshStandardMaterial({
             color: 0xcfd8dc,
             metalness: 0.95,
             roughness: 0.25
           });
         }
-        
-        n.castShadow = false;
+        n.castShadow    = false;
         n.receiveShadow = false;
-        n.frustumCulled = false; 
+        n.frustumCulled = false;
       }
     });
 
-    if (this.isMobile) {
-      this.mainModelGroup.position.y = 0.5; 
+    // Posición y escala según tier
+    if (this.isFixedModel) {
+      this.mainModelGroup.position.y = this.isMobile ? 0.5 : 0.3;
     }
     this.mainModelGroup.add(model);
-    this.mainModelGroup.scale.setScalar(this.isMobile ? 3.5 : 5);
+    this.mainModelGroup.scale.setScalar(
+      this.isMobile ? 3.5 : this.isTablet ? 4.5 : 5
+    );
   });
 }
 
@@ -526,23 +612,25 @@ private loadMainBust(): void {
     setTimeout(() => ScrollTrigger.refresh(), 300);
     setTimeout(() => ScrollTrigger.refresh(), 1200);
 
-    // En móvil quitamos el overlay negro directamente — el trigger no es fiable en iOS
-    if (this.isMobile) {
+    // ── MODELO FIJO — móvil y tablet ──────────────────────────
+    if (this.isFixedModel) {
       gsap.set('.hero-black-bg', { opacity: 0 });
-    } else {
-      gsap.to('.hero-black-bg', {
-        scrollTrigger: { trigger: '.about-section', start: 'top 90%', end: 'top 30%', scrub: true },
-        opacity: 0
-      });
+      this.setupFixedModelObserver();
+      setTimeout(() => this.initCounters(), 300);
+      return; // sin animaciones de scroll para el modelo
     }
 
-    // Zoom cámara
-    gsap.to(this.camera.position, {
-      scrollTrigger: { trigger: '.about-section', start: 'top bottom', end: 'top center', scrub: 1 },
-      z: this.isMobile ? 12 : 9
+    // ── MODELO INTERACTIVO — laptop y desktop ─────────────────
+    gsap.to('.hero-black-bg', {
+      scrollTrigger: { trigger: '.about-section', start: 'top 90%', end: 'top 30%', scrub: true },
+      opacity: 0
     });
 
-    // Rotación en about
+    gsap.to(this.camera.position, {
+      scrollTrigger: { trigger: '.about-section', start: 'top bottom', end: 'top center', scrub: 1 },
+      z: 9
+    });
+
     gsap.to(this, {
       scrollTrigger: {
         trigger: '.about-section', start: 'top center', end: 'bottom center', scrub: 1,
@@ -552,35 +640,27 @@ private loadMainBust(): void {
       scrollRotationY: Math.PI - 0.5
     });
 
-    // Desplazamiento lateral solo en desktop
-    if (!this.isMobile) {
-      gsap.to(this.mainModelGroup.position, {
-        scrollTrigger: { trigger: '.about-section', start: 'top center', end: 'bottom center', scrub: 1 },
-        x: 3
-      });
-    }
+    gsap.to(this.mainModelGroup.position, {
+      scrollTrigger: { trigger: '.about-section', start: 'top center', end: 'bottom center', scrub: 1 },
+      x: 3
+    });
 
-    // Rotación en video section
     gsap.to(this, {
       scrollTrigger: { trigger: '.video-section', start: 'top center', end: 'bottom center', scrub: 1 },
       scrollRotationY: Math.PI - 0.2
     });
 
-    // Canvas blur solo en desktop
-    if (!this.isMobile) {
-      gsap.to('.hm-canvas-blur', {
-        scrollTrigger: { trigger: '.video-section', start: 'top 70%', end: 'top 20%', scrub: true },
-        backgroundColor: 'rgba(2,2,2,0.55)', backdropFilter: 'blur(4px)', webkitBackdropFilter: 'blur(4px)'
-      });
-      gsap.to('.hm-canvas-blur', {
-        scrollTrigger: { trigger: '.carousel-section', start: 'top 70%', end: 'top 30%', scrub: true },
-        backgroundColor: 'rgba(2,2,2,0)', backdropFilter: 'blur(0px)', webkitBackdropFilter: 'blur(0px)'
-      });
-    }
+    gsap.to('.hm-canvas-blur', {
+      scrollTrigger: { trigger: '.video-section', start: 'top 70%', end: 'top 20%', scrub: true },
+      backgroundColor: 'rgba(2,2,2,0.55)', backdropFilter: 'blur(4px)', webkitBackdropFilter: 'blur(4px)'
+    });
+    gsap.to('.hm-canvas-blur', {
+      scrollTrigger: { trigger: '.carousel-section', start: 'top 70%', end: 'top 30%', scrub: true },
+      backgroundColor: 'rgba(2,2,2,0)', backdropFilter: 'blur(0px)', webkitBackdropFilter: 'blur(0px)'
+    });
 
     this.initDataParticles();
 
-    // Salida del modelo
     gsap.to(this.mainModelGroup.position, {
       scrollTrigger: { trigger: '.carousel-section', start: 'top center', end: 'bottom center', scrub: 1 },
       y: 7, z: -6
@@ -589,78 +669,183 @@ private loadMainBust(): void {
     setTimeout(() => this.initCounters(), 300);
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // PARTÍCULAS THREE.js — solo desktop
-  // ═══════════════════════════════════════════════════════════════
+  private setupFixedModelObserver(): void {
+    const videoSection = document.querySelector('.video-section');
+    if (!videoSection) return;
 
-  private addGlobalParticles(): void {
-    // Desktop: 3000 | Tablet: 0 (isLowEnd) | Móvil: 0 (isLowEnd)
-    const count = 3000;
+    let pastVideo = false;
 
-    const geometry  = new THREE.BufferGeometry();
-    const positions = new Float32Array(count * 3);
-    const colors    = new Float32Array(count * 3);
-    const color     = new THREE.Color();
+    // Valores iniciales — deben coincidir con loadMainBust()
+    const initialScale = this.isMobile ? 3.5 : 4.5;
+    const initialY     = this.isMobile ? 0.5 : 0.3;
+    const smallScale   = this.isMobile ? 2.2 : 3.0;
+    const topY         = this.isMobile ? 4.2 : 3.8;
+    const camZNear     = this.isMobile ? 14  : 11;
+    const camZFar      = this.isMobile ? 20  : 16;
 
-    for (let i = 0; i < count; i++) {
-      positions[i * 3]     = (Math.random() - 0.5) * 40;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 40;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 80;
-      color.setHSL(0.55 + Math.random() * 0.15, 0.8, 0.6);
-      colors[i * 3]     = color.r;
-      colors[i * 3 + 1] = color.g;
-      colors[i * 3 + 2] = color.b;
-    }
+    const obs = new IntersectionObserver(entries => {
+      const entry = entries[0];
+      const scrolledPast = !entry.isIntersecting && entry.boundingClientRect.top < 0;
 
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color',    new THREE.BufferAttribute(colors, 3));
+      if (scrolledPast && !pastVideo) {
+        pastVideo = true;
+        // Modelo se desplaza arriba y se reduce — efecto "queda arriba"
+        gsap.to(this.mainModelGroup.position, { y: topY, x: 0, z: 0, duration: 0.7, ease: 'power2.inOut' });
+        gsap.to(this.mainModelGroup.scale,    { x: smallScale, y: smallScale, z: smallScale, duration: 0.7, ease: 'power2.inOut' });
+        gsap.to(this.camera.position,         { z: camZFar, duration: 0.7, ease: 'power2.inOut' });
+      } else if (!scrolledPast && pastVideo) {
+        pastVideo = false;
+        // Vuelve al estado inicial al subir
+        gsap.to(this.mainModelGroup.position, { y: initialY, x: 0, z: 0, duration: 0.7, ease: 'power2.inOut' });
+        gsap.to(this.mainModelGroup.scale,    { x: initialScale, y: initialScale, z: initialScale, duration: 0.7, ease: 'power2.inOut' });
+        gsap.to(this.camera.position,         { z: camZNear, duration: 0.7, ease: 'power2.inOut' });
+      }
+    }, { threshold: 0 });
 
-    const texture  = new THREE.TextureLoader().load('assets/textures/particle.png');
-    const material = new THREE.PointsMaterial({
-      size: 0.6, map: texture, vertexColors: true,
-      transparent: true, opacity: 0.9,
-      depthWrite: false, blending: THREE.AdditiveBlending
-    });
-
-    this.particles = new THREE.Points(geometry, material);
-    this.scene.add(this.particles);
+    obs.observe(videoSection);
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // LOOP — 30fps en móvil, 60fps en desktop
-  // ═══════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════
+    // PARTÍCULAS THREE.js — solo desktop
+    // ═══════════════════════════════════════════════════════════════
 
-  private animate = () => {
-    this.animationId = requestAnimationFrame(this.animate);
+private addGlobalParticles(): void {
+  // --- AJUSTE DE CANTIDAD: Menos es más ---
+  // Reducimos drásticamente para limpiar el fondo.
+  const count = this.isIntegratedGPU ? 300 : 600; // Antes era 900/1800
 
+  const geometry = new THREE.BufferGeometry();
+  const positions = new Float32Array(count * 3);
+  const colors = new Float32Array(count * 3);
+  const color = new THREE.Color();
+
+  for (let i = 0; i < count; i++) {
+    // --- DISTRIBUCIÓN EXPANSIVA ---
+    // Aumentamos el rango de X e Y para que las partículas se alejen del centro (el rostro)
+    // X: de -40 a 40 | Y: de -30 a 30
+    positions[i * 3]     = (Math.random() - 0.5) * 80; 
+    positions[i * 3 + 1] = (Math.random() - 0.5) * 60;
     
-    // 1. Si no hay interacción ni scroll, y estamos en móvil, bajamos aún más el ritmo
-      if (this.isMobile) {
-        this.frameCount++;
-        if (this.frameCount % 3 !== 0) return; // Bajamos a ~20fps en reposo móvil
+    // PROFUNDIDAD DINÁMICA
+    // Z: Algunas muy cerca de la cámara, otras muy al fondo (de -100 a 20)
+    // Esto crea el efecto de túnel o polvo estelar tecnológico
+    const z = (Math.random() * 120) - 100;
+    positions[i * 3 + 2] = z;
+  
+    // COLOR SEGÚN PROFUNDIDAD
+    // Partículas lejanas (Z negativo alto) son más oscuras para dar profundidad real
+    const depthFactor = (z + 100) / 120; // 0 a 1
+    const l = 0.2 + (depthFactor * 0.5); 
+    
+    color.setHSL(0.55 + Math.random() * 0.1, 0.8, l);
+    
+    colors[i * 3]     = color.r;
+    colors[i * 3 + 1] = color.g;
+    colors[i * 3 + 2] = color.b;
+  }
+
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+  // --- NUEVA CONFIGURACIÓN DE SHADER (MÁS NÍTIDA) ---
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      // AJUSTE DE TAMAÑO: Súper pequeñas para que sean puntos nítidos
+      uSize: { value: this.isIntegratedGPU ? 10.0 : 15.0 }, // Antes era ~35.0
+      // AJUSTE DE OPACIDAD: Más transparentes
+      uOpacity: { value: 0.6 } // Antes era 0.8
+    },
+    vertexShader: `
+      attribute vec3 color;
+      varying vec3 vColor;
+      uniform float uSize;
+      void main() {
+        vColor = color;
+        vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+        // Atenuación de tamaño por distancia: más natural
+        gl_PointSize = uSize * ( 300.0 / -mvPosition.z );
+        gl_Position = projectionMatrix * mvPosition;
       }
+    `,
+    fragmentShader: `
+      varying vec3 vColor;
+      uniform float uOpacity;
+      void main() {
+        float dist = distance(gl_PointCoord, vec2(0.5));
+        
+        // BORDE DURO: Si está fuera del radio 0.5, desaparece.
+        // Esto elimina las "manchas borrosas" por completo.
+        if (dist > 0.5) discard;
+        
+        // Brillo interno extremadamente sutil (look "píxel redondo")
+        float alpha = 1.0 - smoothstep(0.3, 0.5, dist);
+        
+        gl_FragColor = vec4( vColor, alpha * uOpacity );
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    // Mantenemos AdditiveBlending porque los puntos son pequeños y no saturarán
+    blending: THREE.AdditiveBlending 
+  });
 
-    // Suavizado de movimiento
-      this.mouseOffsetY += (this.targetMouseY - this.mouseOffsetY) * (this.isMobile ? 0.03 : 0.05);
-      this.mouseOffsetX += (this.targetMouseX - this.mouseOffsetX) * (this.isMobile ? 0.03 : 0.05);
+  this.particles = new THREE.Points(geometry, material);
+  this.scene.add(this.particles);
 
-    if (!this.interactionEnabled) {
-      this.mouseOffsetY *= 0.9;
-      this.mouseOffsetX *= 0.9;
-    }
+  console.log(`[Particles] Optimizadas: ${count} puntos nítidos.`);
+}
 
-    this.mainModelGroup.rotation.y = this.scrollRotationY + this.mouseOffsetY;
-    this.mainModelGroup.rotation.x = this.mouseOffsetX;
+    // ═══════════════════════════════════════════════════════════════
+    // LOOP — 30fps en móvil, 60fps en desktop
+    // ═══════════════════════════════════════════════════════════════
 
-    this.keyLight.position.x = this.mainModelGroup.position.x + 2;
-    this.keyLight.position.y = this.mainModelGroup.position.y + 3;
-    this.rimLight.position.x = this.mainModelGroup.position.x - 3;
-    this.rimLight.position.y = this.mainModelGroup.position.y + 1;
-
-    if (this.particles) this.particles.rotation.y += 0.0008;
-
-    this.renderer.render(this.scene, this.camera);
-  };
+    private animate = () => {
+      this.animationId = requestAnimationFrame(this.animate);
+    
+      // Throttle por tier
+      if (this.isFixedModel) {
+        this.frameCount++;
+        if (this.frameCount % 3 !== 0) return; // ~20fps en móvil y tablet
+      } else if (this.isIntegratedGPU) {
+        const isIdle = (performance.now() - this.lastInteractionTime) > this.IDLE_MS;
+        if (isIdle) {
+          this.frameCount++;
+          if (this.frameCount % 2 !== 0) return; // ~30fps idle en laptop
+        }
+        // Con interacción activa → 60fps completos
+      }
+      // Desktop dedicado: siempre 60fps
+    
+      // Rotación del modelo
+      if (this.isFixedModel) {
+        // Estático: sin cursor ni scroll
+        this.mainModelGroup.rotation.y = this.scrollRotationY; // Math.PI fijo
+        this.mainModelGroup.rotation.x = 0;
+      } else {
+        const lerpFactor = this.isIntegratedGPU ? 0.04 : 0.05;
+        this.mouseOffsetY += (this.targetMouseY - this.mouseOffsetY) * lerpFactor;
+        this.mouseOffsetX += (this.targetMouseX - this.mouseOffsetX) * lerpFactor;
+      
+        if (!this.interactionEnabled) {
+          this.mouseOffsetY *= 0.9;
+          this.mouseOffsetX *= 0.9;
+        }
+      
+        this.mainModelGroup.rotation.y = this.scrollRotationY + this.mouseOffsetY;
+        this.mainModelGroup.rotation.x = this.mouseOffsetX;
+      }
+    
+      this.keyLight.position.x = this.mainModelGroup.position.x + 2;
+      this.keyLight.position.y = this.mainModelGroup.position.y + 3;
+      this.rimLight.position.x = this.mainModelGroup.position.x - 3;
+      this.rimLight.position.y = this.mainModelGroup.position.y + 1;
+    
+      if (this.particles) {
+        this.particles.rotation.y += this.isIntegratedGPU ? 0.0004 : 0.0008;
+      }
+    
+      this.renderer.render(this.scene, this.camera);
+    };
 
   // ═══════════════════════════════════════════════════════════════
   // INTERACTION
@@ -670,26 +855,23 @@ private loadMainBust(): void {
   private onTouchMove = (e: TouchEvent) => this.handleInteraction(e.touches[0].clientX, e.touches[0].clientY);
 
   private handleInteraction(x: number, y: number): void {
-    if (!this.interactionEnabled) return;
-    const factor = this.isMobile ? 0.25 : 0.6;
+    if (!this.interactionEnabled || this.isFixedModel) return;
+    this.lastInteractionTime = performance.now();
+    const factor = 0.6;
     this.targetMouseY = (x / window.innerWidth  - 0.5) * factor;
     this.targetMouseX = (y / window.innerHeight - 0.5) * (factor / 2);
   }
 
   private onResize = () => {
-    // 1. Validar si el cambio de ancho es real (Ignorar saltos de barra de herramientas en móvil)
-    if (this.isMobile && Math.abs(window.innerWidth - this.lastWidth) < 50) {
-      return; 
+    // Filtrar saltos de barra de herramientas en touch devices
+    if (this.isFixedModel && Math.abs(window.innerWidth - this.lastWidth) < 50) {
+      return;
     }
-
-    this.lastWidth = window.innerWidth; // Actualizamos para la próxima validación
-
+    this.lastWidth = window.innerWidth;
     const container = this.canvasRef.nativeElement;
     this.camera.aspect = container.clientWidth / container.clientHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(container.clientWidth, container.clientHeight);
-
-    // Refrescar GSAP para que los triggers no se descuadren
     setTimeout(() => ScrollTrigger.refresh(), 200);
   };
 

@@ -299,3 +299,37 @@
   }
 }
 .pv-wm-sep { color: rgba(0, 234, 255, 0.08); }
+
+/* ── Modal warning — tablet optimizado ── */
+@media (min-width: 431px) and (max-width: 1024px) {
+  .hm-mobile-warning {
+    max-width: 420px;
+    padding: clamp(28px, 5vw, 48px);
+  }
+
+  .hm-warning-icon  { font-size: 44px; }
+  .hm-warning-title { font-size: 16px; letter-spacing: 3px; }
+  .hm-warning-text  { font-size: 13px; }
+
+  .hm-btn-close-warning {
+    max-width: 240px;
+    padding: 14px 28px;
+    font-size: 12px;
+  }
+}
+
+/* Landscape en tablet — warning más compacto horizontalmente */
+@media (min-width: 431px) and (max-width: 1024px) and (orientation: landscape) {
+  .hm-mobile-warning {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 560px;
+    gap: 12px;
+    padding: 20px 32px;
+  }
+
+  .hm-warning-icon  { margin-bottom: 0; font-size: 36px; }
+  .hm-warning-title { width: 100%; text-align: center; margin-bottom: 6px; }
+  .hm-warning-text  { margin-bottom: 12px; }
+}
