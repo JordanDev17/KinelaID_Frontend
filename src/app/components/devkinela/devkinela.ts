@@ -97,7 +97,7 @@ entries: DevEntry[] = [
       category: 'ia',
       title: 'Arquitectura del Núcleo: Face Recognition',
       desc: 'El nacimiento de KinelaID. Implementé el motor de reconocimiento sobre Django, '
-          + 'logrando la extracción de encodings faciales con una precisión del 87%. '
+          + 'logrando la extracción de encodings faciales con una precisión del 95%. '
           + 'Fue el primer paso para transformar una señal de video en datos de identidad seguros.',
       img: '/assets/images/dev/ia-engine-01.jpg', // Busca una captura del VS Code con los encodings en consola
       wide: true,
@@ -131,7 +131,7 @@ entries: DevEntry[] = [
       category: 'hardware',
       title: 'Control de Acceso Físico (GPIO)',
       desc: 'El código se vuelve tangible. Implementamos la lógica de control para el Relay de 5V '
-          + 'y el anillo LED de estado. Tras una autenticación exitosa, el sistema libera la cerradura '
+          + 'Tras una autenticación exitosa, el sistema libera la cerradura '
           + 'electromagnética, cerrando el ciclo de seguridad física.',
       img: '/assets/images/dev/relay-control.jpg', // Foto del cableado o el anillo LED encendido
     },
@@ -280,7 +280,7 @@ entries: DevEntry[] = [
 onImgError(e: Event): void {
   const img = e.target as HTMLImageElement;
   // En lugar de ocultarla, pon una imagen genérica de "Sistema"
-  img.src = '/assets/images/dev/ia-01.jpg'; 
+  img.src = '/assets/images/dev/img-notfound.jpg'; 
   img.style.opacity = '0.5';
 }
 

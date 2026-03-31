@@ -61,7 +61,7 @@ export class Home implements AfterViewInit, OnDestroy {
   private keyLight!: THREE.DirectionalLight;
   private rimLight!: THREE.PointLight;
   private mainModelGroup = new THREE.Group();
-  private particles?: THREE.Points;
+  private particles?: THREE.Object3D;
   private animationId!: number;
   private frameCount = 0;
 
@@ -710,60 +710,75 @@ private loadMainBust(): void {
     // ═══════════════════════════════════════════════════════════════
 
 private addGlobalParticles(): void {
-  // --- AJUSTE DE CANTIDAD: Menos es más ---
-  // Reducimos drásticamente para limpiar el fondo.
-  const count = this.isIntegratedGPU ? 300 : 600; // Antes era 900/1800
+  // Ajuste de cantidad según hardware detectado (isIntegratedGPU)
+  const count = this.isIntegratedGPU ? 400 : 800;
 
-  const geometry = new THREE.BufferGeometry();
+  // 1. Geometría base del triángulo
+  const triGeometry = new THREE.BufferGeometry();
+  const triVertices = new Float32Array([
+    -0.15, -0.10, 0,
+     0.15, -0.10, 0,
+     0.0,   0.20, 0 
+  ]);
+  triGeometry.setAttribute('position', new THREE.BufferAttribute(triVertices, 3));
+
+  // 2. Geometría Instanciada (Solución al error TS2345)
+  const geometry = new THREE.InstancedBufferGeometry();
+  
+  // Transferimos los atributos manualmente para asegurar compatibilidad de tipos
+  const basePosition = triGeometry.getAttribute('position');
+  geometry.setAttribute('position', basePosition);
+  geometry.instanceCount = count;
+
   const positions = new Float32Array(count * 3);
   const colors = new Float32Array(count * 3);
   const color = new THREE.Color();
 
-  for (let i = 0; i < count; i++) {
-    // --- DISTRIBUCIÓN EXPANSIVA ---
-    // Aumentamos el rango de X e Y para que las partículas se alejen del centro (el rostro)
-    // X: de -40 a 40 | Y: de -30 a 30
-    positions[i * 3]     = (Math.random() - 0.5) * 80; 
-    positions[i * 3 + 1] = (Math.random() - 0.5) * 60;
-    
-    // PROFUNDIDAD DINÁMICA
-    // Z: Algunas muy cerca de la cámara, otras muy al fondo (de -100 a 20)
-    // Esto crea el efecto de túnel o polvo estelar tecnológico
-    const z = (Math.random() * 120) - 100;
-    positions[i * 3 + 2] = z;
+for (let i = 0; i < count; i++) {
+  // --- DISTRIBUCIÓN EXPANSIVA ---
+  // Aumentamos el rango de X e Y para que las partículas se alejen del centro (el rostro)
+  // X: de -40 a 40 | Y: de -30 a 30
+  positions[i * 3]     = (Math.random() - 0.5) * 80; 
+  positions[i * 3 + 1] = (Math.random() - 0.5) * 60;
   
-    // COLOR SEGÚN PROFUNDIDAD
-    // Partículas lejanas (Z negativo alto) son más oscuras para dar profundidad real
-    const depthFactor = (z + 100) / 120; // 0 a 1
-    const l = 0.2 + (depthFactor * 0.5); 
-    
-    color.setHSL(0.55 + Math.random() * 0.1, 0.8, l);
-    
-    colors[i * 3]     = color.r;
-    colors[i * 3 + 1] = color.g;
-    colors[i * 3 + 2] = color.b;
-  }
+  // PROFUNDIDAD DINÁMICA
+  // Z: Algunas muy cerca de la cámara, otras muy al fondo (de -100 a 20)
+  // Esto crea el efecto de túnel o polvo estelar tecnológico
+  const z = (Math.random() * 120) - 100;
+  positions[i * 3 + 2] = z;
 
-  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  // COLOR SEGÚN PROFUNDIDAD
+  // Partículas lejanas (Z negativo alto) son más oscuras para dar profundidad real
+  const depthFactor = (z + 100) / 120; // 0 a 1
+  const l = 0.2 + (depthFactor * 0.5); 
+  
+  color.setHSL(0.55 + Math.random() * 0.1, 0.8, l);
+  
+  colors[i * 3]     = color.r;
+  colors[i * 3 + 1] = color.g;
+  colors[i * 3 + 2] = color.b;
+}
 
-  // --- NUEVA CONFIGURACIÓN DE SHADER (MÁS NÍTIDA) ---
+  // Atributos de instancia para el Shader
+  geometry.setAttribute('instancePosition', new THREE.InstancedBufferAttribute(positions, 3));
+  geometry.setAttribute('instanceColor', new THREE.InstancedBufferAttribute(colors, 3));
+
+  // 3. Material con Shader personalizado
   const material = new THREE.ShaderMaterial({
     uniforms: {
-      // AJUSTE DE TAMAÑO: Súper pequeñas para que sean puntos nítidos
-      uSize: { value: this.isIntegratedGPU ? 10.0 : 15.0 }, // Antes era ~35.0
-      // AJUSTE DE OPACIDAD: Más transparentes
-      uOpacity: { value: 0.6 } // Antes era 0.8
+      uOpacity: { value: 0.55 }
     },
     vertexShader: `
-      attribute vec3 color;
+      attribute vec3 instancePosition;
+      attribute vec3 instanceColor;
       varying vec3 vColor;
-      uniform float uSize;
       void main() {
-        vColor = color;
-        vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-        // Atenuación de tamaño por distancia: más natural
-        gl_PointSize = uSize * ( 300.0 / -mvPosition.z );
+        vColor = instanceColor;
+        // Escala dinámica según profundidad (Z)
+        float scale = 0.8 + (instancePosition.z + 100.0) / 150.0;
+        vec3 transformedPos = position * scale;
+        
+        vec4 mvPosition = modelViewMatrix * vec4( instancePosition + transformedPos, 1.0 );
         gl_Position = projectionMatrix * mvPosition;
       }
     `,
@@ -771,28 +786,22 @@ private addGlobalParticles(): void {
       varying vec3 vColor;
       uniform float uOpacity;
       void main() {
-        float dist = distance(gl_PointCoord, vec2(0.5));
-        
-        // BORDE DURO: Si está fuera del radio 0.5, desaparece.
-        // Esto elimina las "manchas borrosas" por completo.
-        if (dist > 0.5) discard;
-        
-        // Brillo interno extremadamente sutil (look "píxel redondo")
-        float alpha = 1.0 - smoothstep(0.3, 0.5, dist);
-        
-        gl_FragColor = vec4( vColor, alpha * uOpacity );
+        gl_FragColor = vec4( vColor, uOpacity );
       }
     `,
     transparent: true,
     depthWrite: false,
-    // Mantenemos AdditiveBlending porque los puntos son pequeños y no saturarán
-    blending: THREE.AdditiveBlending 
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide
   });
 
-  this.particles = new THREE.Points(geometry, material);
-  this.scene.add(this.particles);
+  // 4. Asignación al Mesh de la clase
+  this.particles = new THREE.Mesh(geometry, material);
 
-  console.log(`[Particles] Optimizadas: ${count} puntos nítidos.`);
+  if (this.particles) {
+    this.scene.add(this.particles);
+    console.log(`[Kinela Tech] Renderizado exitoso de ${count} fragmentos.`);
+  }
 }
 
     // ═══════════════════════════════════════════════════════════════
